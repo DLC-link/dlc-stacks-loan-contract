@@ -1,0 +1,13 @@
+node_modules
+
+package-lock.json
+
+secrets.ts
+
+settings/Mainnet.toml
+settings/Testnet.toml
+history.txt
+
+*.html
+*.css
+*.png
