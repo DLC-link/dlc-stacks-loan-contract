@@ -17,7 +17,7 @@ async function main() {
   );
 
   const sub = await client.subscribeAddressTransactions(
-    "ST31H4TTX6TVMEE86TYV6PN6XPQ6J7NCS2DD0XFW0.discreet-log-storage-v3",
+    "ST31H4TTX6TVMEE86TYV6PN6XPQ6J7NCS2DD0XFW0.discreet-log-storage-v5",
     function (transactionInfo) {
       if (transactionInfo.tx_status == "success") {
         const tx = fetchTxAndExtractPrintEvent(transactionInfo.tx_id);

@@ -1,0 +1,14 @@
+---
+id: 0
+name: Testnet deployment
+network: testnet
+node: "https://stacks-node-api.testnet.stacks.co"
+plan:
+  batches:
+    - id: 0
+      transactions:
+        - contract-publish:
+            contract-name: discreet-log-storage-v5
+            expected-sender: ST31H4TTX6TVMEE86TYV6PN6XPQ6J7NCS2DD0XFW0
+            path: contracts/discreet-log-storage-v5.clar
+            cost: 61700

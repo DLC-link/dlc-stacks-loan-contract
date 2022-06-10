@@ -1,8 +1,8 @@
-export { Clarinet, Tx, Chain, types } from 'https://deno.land/x/clarinet@v0.27.0/index.ts';
-export type { Account, Block } from 'https://deno.land/x/clarinet@v0.27.0/index.ts';
+export { Clarinet, Tx, Chain, types } from 'https://deno.land/x/clarinet@v0.31.1/index.ts';
+export type { Account, Block } from 'https://deno.land/x/clarinet@v0.31.1/index.ts';
 export { assertEquals, assertStringIncludes } from 'https://deno.land/std@0.90.0/testing/asserts.ts';
 
-import { types } from 'https://deno.land/x/clarinet@v0.27.0/index.ts';
+import { types } from 'https://deno.land/x/clarinet@v0.31.1/index.ts';
 
 export type PricePackage = {
 	prices: { symbol: string, value: any }[],

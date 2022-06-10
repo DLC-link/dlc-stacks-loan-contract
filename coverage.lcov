@@ -1,5 +1,5 @@
 TN:Contract owner can set trusted oracle
-SF:/Users/gabkov/Projects/dlc/redstone/DLC-Clarity-Smart-Contract-Redstone/contracts/discreet-log-storage-v3.clar
+SF:/Users/gabkov/Projects/dlc/redstone/DLC-Clarity-Smart-Contract-Redstone/contracts/discreet-log-storage-v5.clar
 FN:38,get-last-block-timestamp
 FN:41,get-dlc
 FN:45,open-new-dlc
@@ -87,7 +87,7 @@ DA:133,4
 DA:134,4
 end_of_record
 TN:Deployment
-SF:/Users/gabkov/Projects/dlc/redstone/DLC-Clarity-Smart-Contract-Redstone/contracts/discreet-log-storage-v3.clar
+SF:/Users/gabkov/Projects/dlc/redstone/DLC-Clarity-Smart-Contract-Redstone/contracts/discreet-log-storage-v5.clar
 FN:38,get-last-block-timestamp
 FN:41,get-dlc
 FN:45,open-new-dlc
@@ -174,7 +174,7 @@ DA:133,0
 DA:134,0
 end_of_record
 TN:can't add the same DLC twice
-SF:/Users/gabkov/Projects/dlc/redstone/DLC-Clarity-Smart-Contract-Redstone/contracts/discreet-log-storage-v3.clar
+SF:/Users/gabkov/Projects/dlc/redstone/DLC-Clarity-Smart-Contract-Redstone/contracts/discreet-log-storage-v5.clar
 FN:38,get-last-block-timestamp
 FN:41,get-dlc
 FN:45,open-new-dlc
@@ -262,7 +262,7 @@ DA:133,0
 DA:134,0
 end_of_record
 TN:can't close a dlc twice
-SF:/Users/gabkov/Projects/dlc/redstone/DLC-Clarity-Smart-Contract-Redstone/contracts/discreet-log-storage-v3.clar
+SF:/Users/gabkov/Projects/dlc/redstone/DLC-Clarity-Smart-Contract-Redstone/contracts/discreet-log-storage-v5.clar
 FN:38,get-last-block-timestamp
 FN:41,get-dlc
 FN:45,open-new-dlc
@@ -355,7 +355,7 @@ DA:133,4
 DA:134,4
 end_of_record
 TN:can't close a dlc with wrong asset submitted
-SF:/Users/gabkov/Projects/dlc/redstone/DLC-Clarity-Smart-Contract-Redstone/contracts/discreet-log-storage-v3.clar
+SF:/Users/gabkov/Projects/dlc/redstone/DLC-Clarity-Smart-Contract-Redstone/contracts/discreet-log-storage-v5.clar
 FN:38,get-last-block-timestamp
 FN:41,get-dlc
 FN:45,open-new-dlc
@@ -448,7 +448,7 @@ DA:133,4
 DA:134,4
 end_of_record
 TN:can't early close a dlc twice
-SF:/Users/gabkov/Projects/dlc/redstone/DLC-Clarity-Smart-Contract-Redstone/contracts/discreet-log-storage-v3.clar
+SF:/Users/gabkov/Projects/dlc/redstone/DLC-Clarity-Smart-Contract-Redstone/contracts/discreet-log-storage-v5.clar
 FN:38,get-last-block-timestamp
 FN:41,get-dlc
 FN:45,open-new-dlc
@@ -541,7 +541,7 @@ DA:133,4
 DA:134,4
 end_of_record
 TN:can't early close a dlc with wrong asset submitted
-SF:/Users/gabkov/Projects/dlc/redstone/DLC-Clarity-Smart-Contract-Redstone/contracts/discreet-log-storage-v3.clar
+SF:/Users/gabkov/Projects/dlc/redstone/DLC-Clarity-Smart-Contract-Redstone/contracts/discreet-log-storage-v5.clar
 FN:38,get-last-block-timestamp
 FN:41,get-dlc
 FN:45,open-new-dlc
@@ -634,7 +634,7 @@ DA:133,4
 DA:134,4
 end_of_record
 TN:close-dlc updates closing-price and actual-closing-time and burns the corresponding nft
-SF:/Users/gabkov/Projects/dlc/redstone/DLC-Clarity-Smart-Contract-Redstone/contracts/discreet-log-storage-v3.clar
+SF:/Users/gabkov/Projects/dlc/redstone/DLC-Clarity-Smart-Contract-Redstone/contracts/discreet-log-storage-v5.clar
 FN:38,get-last-block-timestamp
 FN:41,get-dlc
 FN:45,open-new-dlc
@@ -727,7 +727,7 @@ DA:133,4
 DA:134,4
 end_of_record
 TN:create-dlc emits an event
-SF:/Users/gabkov/Projects/dlc/redstone/DLC-Clarity-Smart-Contract-Redstone/contracts/discreet-log-storage-v3.clar
+SF:/Users/gabkov/Projects/dlc/redstone/DLC-Clarity-Smart-Contract-Redstone/contracts/discreet-log-storage-v5.clar
 FN:38,get-last-block-timestamp
 FN:41,get-dlc
 FN:45,open-new-dlc
@@ -815,7 +815,7 @@ DA:133,0
 DA:134,0
 end_of_record
 TN:early-close-dlc updates closing-price and actual-closing-time and burns the corresponding nft
-SF:/Users/gabkov/Projects/dlc/redstone/DLC-Clarity-Smart-Contract-Redstone/contracts/discreet-log-storage-v3.clar
+SF:/Users/gabkov/Projects/dlc/redstone/DLC-Clarity-Smart-Contract-Redstone/contracts/discreet-log-storage-v5.clar
 FN:38,get-last-block-timestamp
 FN:41,get-dlc
 FN:45,open-new-dlc
@@ -908,7 +908,7 @@ DA:133,4
 DA:134,4
 end_of_record
 TN:get-dlc-closing-price-and-time returns correct closing-price for closed DLC
-SF:/Users/gabkov/Projects/dlc/redstone/DLC-Clarity-Smart-Contract-Redstone/contracts/discreet-log-storage-v3.clar
+SF:/Users/gabkov/Projects/dlc/redstone/DLC-Clarity-Smart-Contract-Redstone/contracts/discreet-log-storage-v5.clar
 FN:38,get-last-block-timestamp
 FN:41,get-dlc
 FN:45,open-new-dlc
@@ -1002,7 +1002,7 @@ DA:133,4
 DA:134,4
 end_of_record
 TN:get-dlc-closing-price-and-time throws u2007 of not closed
-SF:/Users/gabkov/Projects/dlc/redstone/DLC-Clarity-Smart-Contract-Redstone/contracts/discreet-log-storage-v3.clar
+SF:/Users/gabkov/Projects/dlc/redstone/DLC-Clarity-Smart-Contract-Redstone/contracts/discreet-log-storage-v5.clar
 FN:38,get-last-block-timestamp
 FN:41,get-dlc
 FN:45,open-new-dlc
@@ -1092,7 +1092,7 @@ DA:133,0
 DA:134,0
 end_of_record
 TN:only authorized wallets can close dlc
-SF:/Users/gabkov/Projects/dlc/redstone/DLC-Clarity-Smart-Contract-Redstone/contracts/discreet-log-storage-v3.clar
+SF:/Users/gabkov/Projects/dlc/redstone/DLC-Clarity-Smart-Contract-Redstone/contracts/discreet-log-storage-v5.clar
 FN:38,get-last-block-timestamp
 FN:41,get-dlc
 FN:45,open-new-dlc
@@ -1185,7 +1185,7 @@ DA:133,4
 DA:134,4
 end_of_record
 TN:only authorized wallets can eraly close dlc
-SF:/Users/gabkov/Projects/dlc/redstone/DLC-Clarity-Smart-Contract-Redstone/contracts/discreet-log-storage-v3.clar
+SF:/Users/gabkov/Projects/dlc/redstone/DLC-Clarity-Smart-Contract-Redstone/contracts/discreet-log-storage-v5.clar
 FN:38,get-last-block-timestamp
 FN:41,get-dlc
 FN:45,open-new-dlc
@@ -1278,7 +1278,7 @@ DA:133,4
 DA:134,4
 end_of_record
 TN:only contract owner can add DLC
-SF:/Users/gabkov/Projects/dlc/redstone/DLC-Clarity-Smart-Contract-Redstone/contracts/discreet-log-storage-v3.clar
+SF:/Users/gabkov/Projects/dlc/redstone/DLC-Clarity-Smart-Contract-Redstone/contracts/discreet-log-storage-v5.clar
 FN:38,get-last-block-timestamp
 FN:41,get-dlc
 FN:45,open-new-dlc
@@ -1366,7 +1366,7 @@ DA:133,0
 DA:134,0
 end_of_record
 TN:open-new-dlc creates a new dlc and mints an open-dlc nft
-SF:/Users/gabkov/Projects/dlc/redstone/DLC-Clarity-Smart-Contract-Redstone/contracts/discreet-log-storage-v3.clar
+SF:/Users/gabkov/Projects/dlc/redstone/DLC-Clarity-Smart-Contract-Redstone/contracts/discreet-log-storage-v5.clar
 FN:38,get-last-block-timestamp
 FN:41,get-dlc
 FN:45,open-new-dlc
@@ -1455,7 +1455,7 @@ DA:133,0
 DA:134,0
 end_of_record
 TN:readonly-calls
-SF:/Users/gabkov/Projects/dlc/redstone/DLC-Clarity-Smart-Contract-Redstone/contracts/discreet-log-storage-v3.clar
+SF:/Users/gabkov/Projects/dlc/redstone/DLC-Clarity-Smart-Contract-Redstone/contracts/discreet-log-storage-v5.clar
 FN:38,get-last-block-timestamp
 FN:41,get-dlc
 FN:45,open-new-dlc
