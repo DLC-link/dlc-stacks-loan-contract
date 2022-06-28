@@ -8,7 +8,7 @@ plan:
     - id: 0
       transactions:
         - contract-publish:
-            contract-name: discreet-log-storage-v5
+            contract-name: discreet-log-storage-v5-1
             expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/discreet-log-storage-v5.clar
-            cost: 73450
+            path: contracts/discreet-log-storage-v5-1.clar
+            cost: 72130
