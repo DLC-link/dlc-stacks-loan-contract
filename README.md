@@ -16,7 +16,9 @@ This contract acts to feed the outcome of the DLC. By using a smart contract for
 
 ## Opening a DLC
 
-When you register a DLC with this contract using the `create-dlc` function, a DLC is opened on our DLC server with the associated outcomes (CETs) and using the provided asset (e.g. BTC) as a price value to be used within the DLC. The DLC *announcement hash*, which needed to fund the DLC, is available on the website (https://app.dlc.link/ - click Open DLCs), and eventually via an API call and on-chain.
+When you register a DLC with this contract using the `create-dlc` function, a DLC is opened on our DLC server with the associated outcomes (CETs) and using the provided asset (e.g. BTC) as a price value to be used within the DLC. A list of asset symbols that can be used with Redstone is available here: https://app.redstone.finance/#/app/data-feeds/redstone-main-demo
+
+The DLC *announcement hash*, which needed to fund the DLC, is available on the website (https://app.dlc.link/ - click Open DLCs), and eventually via an API call and on-chain.
 
 See the comments in the contract for further information about using this function.
 
