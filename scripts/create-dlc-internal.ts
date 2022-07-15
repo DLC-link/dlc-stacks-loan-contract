@@ -1,6 +1,5 @@
 import {
   network,
-  senderAddress,
   senderKey,
   contractAddress,
   contractName,
@@ -16,7 +15,7 @@ import {
   standardPrincipalCV,
 } from "@stacks/transactions";
 
-const functionName = "open-new-dlc";
+const functionName = "create-dlc-internal";
 
 const txOptions = {
   contractAddress: contractAddress,

@@ -25,15 +25,12 @@
 	{
     uuid: (buff 8),
     asset: (buff 32),
-    closing-time: uint,
-    closing-price: (optional uint),
+    closing-time: uint,  ;;seconds because stacks block has the timestamp in seconds
+    closing-price: (optional uint), ;; none means it is still open
     actual-closing-time: uint,
     emergency-refund-time: uint,
     creator: principal
 	})
-
-;; Last seen timestamp. The if clause is so that the contract can deploy on a Clarinet console session.
-(define-data-var last-seen-timestamp uint (if (> block-height u0) (get-last-block-timestamp) u0))
 
 (define-read-only (get-last-block-timestamp)
   (default-to u0 (get-block-info? time (- block-height u1))))
@@ -42,7 +39,7 @@
   (map-get? dlcs uuid))
 
 ;;opens a new dlc
-(define-public (open-new-dlc (uuid (buff 8)) (asset (buff 32)) (closing-time uint) (emergency-refund-time uint) (creator principal))
+(define-public (create-dlc-internal (uuid (buff 8)) (asset (buff 32)) (closing-time uint) (emergency-refund-time uint) (creator principal))
   (begin
     (asserts! (is-eq contract-owner tx-sender) err-unauthorised)
     (asserts! (is-none (map-get? dlcs uuid)) err-dlc-already-added)
@@ -54,20 +51,65 @@
       actual-closing-time: u0, 
       emergency-refund-time: emergency-refund-time,
       creator: creator })
-    (nft-mint? open-dlc uuid .discreet-log-storage-v3))) ;;mint an open-dlc nft to keep track of open dlcs
+    (print {
+      uuid: uuid, 
+      asset: asset, 
+      closing-time: closing-time,
+      emergency-refund-time: emergency-refund-time,
+      creator: creator })
+    (nft-mint? open-dlc uuid .dlc-manager-pricefeed-v1-01))) ;;mint an open-dlc nft to keep track of open dlcs
 
-;;emits an event
-(define-public (create-dlc (asset (buff 32)) (closing-time uint) (emergency-refund-time uint))
+;;emits an event - see README for more details
+;;UUID: a unique 8 character string
+;;asset: the ticker symbol for the asset that will be used to closing price data, e.g. 'btc' (https://github.com/redstone-finance/redstone-api/blob/main/docs/ALL_SUPPORTED_TOKENS.md)
+;;strike-price: the over/under price for the DLC bet
+;;closing-time: the UTC time in seconds after which the contract can be closed, and will fetch the closing price
+;;emergency-refund-time: the time at which the DLC will be available for refund
+(define-public (create-dlc (uuid (buff 8)) (asset (buff 32)) (strike-price uint) (closing-time uint) (emergency-refund-time uint))
   (begin 
     (print {
+      uuid: uuid,
       asset: asset, 
+      strike-price: strike-price,
       closing-time: closing-time, 
       emergency-refund-time: emergency-refund-time,
       creator: tx-sender})
     (ok true)))
 
-;;normal dlc close
-(define-public (close-dlc (uuid (buff 8)) (timestamp uint) (entries (list 10 {symbol: (buff 32), value: uint})) (signature (buff 65)))
+;; External close-dlc request
+(define-public (close-dlc (uuid (buff 8))) 
+  (let (
+    (dlc (unwrap! (get-dlc uuid) err-unknown-dlc))
+    (block-timestamp (get-last-block-timestamp))
+    )
+    (asserts! (is-none (get closing-price dlc)) err-already-closed)
+    (asserts! (or (is-eq contract-owner tx-sender) (is-eq (get creator dlc) tx-sender)) err-unauthorised)
+    (asserts! (>= block-timestamp (get closing-time dlc)) err-not-reached-closing-time)
+    (print { 
+      uuid: uuid, 
+      asset: (get asset dlc),
+      closing-time: (get closing-time dlc)
+      })
+    (ok true)
+  ))
+
+;; Early close request -- admin only
+(define-public (early-close-dlc (uuid (buff 8))) 
+  (let (
+    (dlc (unwrap! (get-dlc uuid) err-unknown-dlc))
+    )
+    (asserts! (is-none (get closing-price dlc)) err-already-closed)
+    (asserts! (is-eq contract-owner tx-sender) err-unauthorised)
+    (print { 
+      uuid: uuid, 
+      asset: (get asset dlc) ,
+      closing-time: (get closing-time dlc)
+      })
+    (ok true)
+  ))
+
+;;Close the dlc with the oracle data. This is called by the DLC Oracle service
+(define-public (close-dlc-internal (uuid (buff 8)) (timestamp uint) (entries (list 10 {symbol: (buff 32), value: uint})) (signature (buff 65)))
   (let (
     ;; Recover the pubkey of the signer.
 		(signer (try! (contract-call? 'STDBEG5X8XD50SPM1JJH0E5CTXGDV5NJTJTTH7YB.redstone-verify recover-signer timestamp entries signature)))
@@ -78,38 +120,16 @@
 		(asserts! (is-trusted-oracle signer) err-untrusted-oracle)
 		;; Check if the data is not stale, depending on how the app is designed.
 		(asserts! (> timestamp block-timestamp) err-stale-data) ;; timestamp should be larger than the last block timestamp.
-		(asserts! (>= timestamp (var-get last-seen-timestamp)) err-stale-data) ;; timestamp should be larger than or equal to the last seen timestamp.
     ;;DLC related checks
     (asserts! (is-eq (unwrap-panic (get symbol (element-at entries u0))) (get asset dlc)) err-not-the-same-assets) ;;check if the submitted asset is the same what was logged in the DLC
-    (asserts! (>= block-timestamp (get closing-time dlc)) err-not-reached-closing-time) ;;dlc not reached closing time
     (asserts! (is-none (get closing-price dlc)) err-already-closed)
-    (asserts! (or (is-eq contract-owner tx-sender) (is-eq (get creator dlc) tx-sender)) err-unauthorised)
-    (var-set last-seen-timestamp timestamp)
-    (map-set dlcs uuid (merge dlc { closing-price: (get value (element-at entries u0)), actual-closing-time: block-timestamp }))
-    (nft-burn? open-dlc uuid .discreet-log-storage-v3))) ;;burn the open-dlc nft related to the UUID
-
-
-;;early dlc close
-(define-public (early-close-dlc (uuid (buff 8)) (timestamp uint) (entries (list 10 {symbol: (buff 32), value: uint})) (signature (buff 65)))
-  (let (
-    ;; Recover the pubkey of the signer.
-		(signer (try! (contract-call? 'STDBEG5X8XD50SPM1JJH0E5CTXGDV5NJTJTTH7YB.redstone-verify recover-signer timestamp entries signature)))
-    (dlc (unwrap! (get-dlc uuid) err-unknown-dlc))
-    (block-timestamp (get-last-block-timestamp))
-    )
-    ;; Check if the signer is a trusted oracle.
-		(asserts! (is-trusted-oracle signer) err-untrusted-oracle)
-		;; Check if the data is not stale, depending on how the app is designed.
-		(asserts! (> timestamp block-timestamp) err-stale-data) ;; timestamp should be larger than the last block timestamp.
-		(asserts! (>= timestamp (var-get last-seen-timestamp)) err-stale-data) ;; timestamp should be larger than or equal to the last seen timestamp.
-    ;;DLC related checks
-    (asserts! (is-eq (unwrap-panic (get symbol (element-at entries u0))) (get asset dlc)) err-not-the-same-assets) ;;check if the submitted asset is the same what was logged in the DLC
-    (asserts! (< block-timestamp (get closing-time dlc)) err-already-passed-closing-time) ;;DLC passed the closing time so can't be closed early
-    (asserts! (is-none (get closing-price dlc)) err-already-closed)
-    (asserts! (or (is-eq contract-owner tx-sender) (is-eq (get creator dlc) tx-sender)) err-unauthorised)
-    (var-set last-seen-timestamp timestamp)
-    (map-set dlcs uuid (merge dlc { closing-price: (get value (element-at entries u0)), actual-closing-time: block-timestamp }))
-    (nft-burn? open-dlc uuid .discreet-log-storage-v3))) ;;burn the open-dlc nft related to the UUID
+    (asserts! (is-eq contract-owner tx-sender) err-unauthorised)
+    (map-set dlcs uuid (merge dlc { closing-price: (get value (element-at entries u0)), actual-closing-time: (/ timestamp u1000) })) ;;timestamp is in milliseconds so we have to convert it to seconds to keep the timestamps consistent
+    (print {
+      uuid: uuid,
+      closing-price: (get value (element-at entries u0)),
+      actual-closing-time: (/ timestamp u1000)})
+    (nft-burn? open-dlc uuid .dlc-manager-pricefeed-v1-01))) ;;burn the open-dlc nft related to the UUID
 
 ;; get the closing price of the DLC by UUID
 (define-read-only (get-dlc-closing-price-and-time (uuid (buff 8)))

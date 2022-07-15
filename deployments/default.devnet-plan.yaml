@@ -8,7 +8,12 @@ plan:
     - id: 0
       transactions:
         - contract-publish:
-            contract-name: discreet-log-storage-v5-1
+            contract-name: redstone-verify
             expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/discreet-log-storage-v5-1.clar
-            cost: 72130
+            path: contracts/external/redstone-verify.clar
+            cost: 45390
+        - contract-publish:
+            contract-name: dlc-manager-pricefeed-v1-01
+            expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/dlc-manager-pricefeed.clar
+            cost: 62730
