@@ -1,7 +1,7 @@
 import fs from "fs";
 import EvmPriceSigner from "redstone-node/dist/src/signers/EvmPriceSigner";
 import { bytesToHex } from "micro-stacks/common";
-import { compressRedstonePubkey, hexToBytes, liteDataHash, liteDataHashPersonalSign, liteSignatureToStacksSignature, liteSignatureToBufferCV } from "../src/stacks-redstone";
+import { compressRedstonePubkey, hexToBytes, liteDataHash, liteDataHashPersonalSign, liteSignatureToStacksSignature, liteSignatureToBufferCV } from './lib/stacks-redstone';
 
 // this script is used to create signed data for the tests
 

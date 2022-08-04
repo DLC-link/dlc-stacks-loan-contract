@@ -2,36 +2,26 @@ import {
   network,
   senderKey,
   contractAddress,
-  contractName,
-  assetName,
-  unixTimeStamp,
-  strikePrice,
-  testCreatorKey
+  contractName
 } from "./common";
 
 import {
   makeContractCall,
   broadcastTransaction,
-  bufferCVFromString,
-  uintCV,
+  contractPrincipalCV,
 } from "@stacks/transactions";
 
-const functionName = "create-dlc";
-
-// TODO: This script no longer works, as the create-dlc function can only be called from a SC
+const protocolContractName = "sample-protocol-contract"
 
 // Replace this with the options required for your contract.
 const txOptions = {
   contractAddress: contractAddress,
   contractName: contractName,
-  functionName: functionName,
+  functionName: "register-contract",
   functionArgs: [
-    bufferCVFromString(assetName), // asset
-    uintCV(strikePrice),
-    uintCV(unixTimeStamp), // closing-time
-    uintCV(unixTimeStamp), // emergency-refund-time
+    contractPrincipalCV(contractAddress, protocolContractName)
   ],
-  senderKey: testCreatorKey,
+  senderKey: senderKey,
   validateWithAbi: true,
   network,
   fee: 100000,

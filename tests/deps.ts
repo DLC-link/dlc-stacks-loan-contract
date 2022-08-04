@@ -12,6 +12,14 @@ export type PricePackage = {
 // One day Clarinet may be able to import actual project source files so we
 // can stop repeating code.
 
+export function hex2ascii(hexx: string) {
+  let hex = hexx.toString();//force conversion
+  let str = '';
+  for (let i = 2; i < hex.length; i += 2)
+      str += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
+  return str;
+}
+
 export function shiftPriceValue(value: number) {
 	return Math.round(value * (10 ** 8))
 }

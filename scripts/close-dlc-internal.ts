@@ -2,7 +2,7 @@ import { network, senderKey, contractAddress, contractName, UUID, assetName, tok
 import redstone from 'redstone-api-extended';
 import { makeContractCall, broadcastTransaction, bufferCV, uintCV, listCV, bufferCVFromString,tupleCV, makeContractNonFungiblePostCondition, createAssetInfo, NonFungibleConditionCode } from "@stacks/transactions";
 import { Buffer } from '@stacks/common';
-import { liteSignatureToStacksSignature } from "../src/stacks-redstone";
+import { liteSignatureToStacksSignature } from './lib/stacks-redstone';
 
 const functionName = "close-dlc-internal";
 

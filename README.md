@@ -1,6 +1,10 @@
 # DLC Manager Smart Contract
 
-This smart contract is the interface for creating and closing DLCs via the DLC.Link infrastructure. Upon close, this version of the contract automatically fills pricing data for the underlying asset (e.g. BTC price) of the DLC. The DLC in this contract only supports a binary payout model, where all the funds locked in the DLC will go to either party A or B depending on whether the final price is above or below the `strike price`. For cases where the DLC does not require market prices of assets, please consider using this simpler version of this contract: [DLC Manager without Price Feeds](https://github.com/DLC-link/dlc-clarity-smart-contract)
+This smart contract is the interface for creating, closing and otherwise managing DLCs via the DLC.Link infrastructure. Upon close, this version of the contract automatically fills pricing data for the underlying asset (e.g. BTC price) of the DLC. 
+
+The DLC in this contract supports (*coming soon) a binary payout model as well as a numerical payout model, where all the funds locked in the DLC will go to either A or B in the case of a planned contract exit (e.g. loan repayment), or on a more complex payout curve depending on the final price of the underlying asset relative to the given `strike-price` (e.g. for a liquidation process). 
+
+For cases where the DLC does not require market prices of assets, please consider using this simpler version of this contract: [DLC Manager without Price Feeds](https://github.com/DLC-link/dlc-clarity-smart-contract)
 
 After creating / closing the DLC, you can see your DLC *announcement* and *attestation* on our dashboard by going here and choosing Open DLCs: https://app.dlc.link/
 
@@ -14,31 +18,67 @@ This contract acts to feed the outcome of the DLC. By using a smart contract for
 
 # How to interact with this contract
 
-## Opening a DLC
+## Clarity Traits
+The following Clarity Traits must be implemented to interact with this contract.
+### Post Create DLC Callback
+Used to callback into the calling/protocol contract to provide the uuid of the created DCL, which will be used to reference the DLC going forward.
+
+Params
+uuid:string - UUID of the DLC
+
+### Post Close DLC Callback
+Used to callback into the calling/protocol contract to notify when a liquidation event occurred and the corresponding price, or simply for reference when a DLC is closed in the normal path.
+
+Params
+uuid:string - UUID of the DLC
+liquidate:boolean
+price:float
+
+## Function to call
+### Register contract
+
+This must be run first by a DLC.Link admin. This authorizes your contract to interact with our DLC Manager contract and to be listened to by our listeners. This happens once, and should happen first before anything else.
+
+Parameters:
+contract-address:Principal
+
+### Unregister Contract
+Used to unregister a contract from the list of authorized contracts
+
+Parameters
+contract-address:Principal
+
+### Opening a DLC
 
 When you register a DLC with this contract using the `create-dlc` function, a DLC is opened on our DLC server with the associated outcomes (CETs) and using the provided asset (e.g. BTC) as a price value to be used within the DLC. A list of asset symbols that can be used with Redstone is available here: https://github.com/redstone-finance/redstone-api/blob/main/docs/ALL_SUPPORTED_TOKENS.md
 
-The DLC *announcement hash*, which needed to fund the DLC, is available on the website (https://app.dlc.link/ - click Open DLCs), and eventually via an API call and on-chain.
+The DLC *announcement hash*, which needed to fund the DLC, is available on the website (https://app.dlc.link/ - click Open DLCs), and eventually via an API call, and eventually on-chain as well.
 
 See the comments in the contract for further information about using this function.
 
-When calling `create-dlc` a user **must provide a UUID**. This is a temporary requirement. If you provide a UUID that is not unique the transaction will fail. The UUID should be 8 characters long, or shorter. For now, a good system might be to take your first name, and increment a digit for each attempt.  
+Parameters:
+* liquidation-price:float
+* payout-formula:format - TBD
+* post-create-dlc-handler:function - Used to callback into the calling/protocol contract to provide the uuid of the created DCL, which will be used to reference the DLC going forward. See the traits section of this document for more information on this function. 
+* post-close-dlc-handler:function - Used to callback into the calling/protocol contract to notify when a liquidation event occurred and the corresponding price, or simply for reference when a DLC is closed in the normal path. See the traits section of this document for more information on this function. 
 
-You can verify that the UUID you are using is unique by checking the following two systems:
+### Closing the DLC
 
-1. Check the DLC dashboard (https://app.dlc.link/ - click Open DLCs) and see if your UUID is in the list.
-1. Check if the UUID is registered in the DLC.Link smart contract already. Browse to the stacks sandbox: https://explorer.stacks.co/sandbox/contract-call?chain=testnet, entering the contract address ([ST12S2DB1PKRM1BJ1G5BQS0AB0QPKHRVHWXDBJ27R.dlc-manager-pricefeed-v1-01](https://explorer.stacks.co/txid/ST12S2DB1PKRM1BJ1G5BQS0AB0QPKHRVHWXDBJ27R.dlc-manager-pricefeed-v1-01?chain=testnet)), choosing the get-dlc function, and entering your desired UUID. 
+The DLC will be closed in one of two ways.
+1. The `principal` who opened the contract chooses to close it by calling the `close-dlc` function, either from their smart contract, or via an off-chain script. In this case, the end user entering into the DLC gets fully repayed their BTC. 
+
+Parameters:
+uuid:string
+
+or
+
+2. When the *public* contract function `early-close-dlc` is called by anyone (including third-parties such as liquidators), with the intention of having the DLC.Link system check the underlying price and potentially trigger a liquidation process.
+
+Parameters:
+uuid:string
 
 
-*In the future, the UUID will be generated by the system and passed back with a callback.* 
-
-The creation of a DLC can also be triggered with a traditional JSON API call (_coming soon TBD_)
-
-With the announcement hash, you are now able to set up the DLC between the two participants (users, user/protocol, etc.)
-
-## Closing the DLC
-
-The DLC will be closed when the `principal` who opened the contract chooses to close it. When the public contract function `close-dlc` is called, the contract connects to the Redstone oracle network through the DLC Oracles, to pull the price of the associated asset. This will trigger the calling of the `close-dlc-internal` function. The DLC.Link backend system catches this event and closes the DLC in the DLC oracle with the associated outcome data. An _attestation hash_ is now created and like the announcement hash, can be acquired via the website or API (or eventually smart contract).
+In either case, the contract connects to the Redstone oracle network through the DLC Oracles, to pull the price of the associated asset. This will trigger the calling of the private `close-dlc-internal` function. The DLC.Link backend system catches this event and closes the DLC in the DLC oracle with the associated outcome data. An _attestation hash_ is now created and like the announcement hash, can be acquired via the website or API (or eventually smart contract).
 
 The attestation hash is what will be used by the participants (user, protocol, etc.) to unlock the funds in the DLC.
 
@@ -46,7 +86,7 @@ The attestation hash is what will be used by the participants (user, protocol, e
 
 We are happy to have support and contribution from the community. Please find us on Discord and see below for developer details.
 
-For reference, a sample of this deployed contract can be found here: [dlc-manager-pricefeed-v1-01](https://explorer.stacks.co/txid/ST12S2DB1PKRM1BJ1G5BQS0AB0QPKHRVHWXDBJ27R.dlc-manager-pricefeed-v1-01?chain=testnet)
+For reference, a sample of this deployed contract can be found here: [dlc-manager-pricefeed-v1-02](https://explorer.stacks.co/txid/ST12S2DB1PKRM1BJ1G5BQS0AB0QPKHRVHWXDBJ27R.dlc-manager-pricefeed-v1-02?chain=testnet)
 
 # Setup Development Environment
 
@@ -79,7 +119,7 @@ Fully testing the contract requires running instances of the DLC oracles and the
 
 1. Update `.env` with the proper information (NODE_ENV=mocknet for mocknet setup)
 2. In `Clarinet.toml`: comment out the `project.requirements` lines (4-5)
-3. In `Clarinet.toml`: uncomment the 3 lines about the redstone-verify contract (11-13)
+3. In `Clarinet.toml`: uncomment the 3 lines about the dev contracts (14-28)
 4. In the `dlc-manager-pricefeed.clar` file, update the redstone-verify contract's principal address to the mocknet deployer's: `ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM`
 5. If you changed anything else in the contract, regenerate the deployment plan:
    1. `$ clarinet deployments generate --devnet`
@@ -220,7 +260,7 @@ closing-price comming from the oracle is not scaled eg.: BTC price: 303609121413
 
 # Scripts
 
-The scripts directory includes an example of how to call each of the functions via JS. These can be used to learn about the functionality of the contract, as well as for calling to the contract.
+The scripts directory includes an example of how to call each of the functions via JS. These can be used to learn about the functionality of the contract, as well as for calling/protocol to the contract.
 
 # What Are DLCs
 

@@ -16,14 +16,12 @@ import {
   uintCV,
 } from "@stacks/transactions";
 
-const functionName = "create-dlc";
-
-// TODO: This script no longer works, as the create-dlc function can only be called from a SC
+const functionName = "setup-user-contract";
 
 // Replace this with the options required for your contract.
 const txOptions = {
   contractAddress: contractAddress,
-  contractName: contractName,
+  contractName: "sample-protocol-contract",
   functionName: functionName,
   functionArgs: [
     bufferCVFromString(assetName), // asset
@@ -31,7 +29,7 @@ const txOptions = {
     uintCV(unixTimeStamp), // closing-time
     uintCV(unixTimeStamp), // emergency-refund-time
   ],
-  senderKey: testCreatorKey,
+  senderKey: senderKey,
   validateWithAbi: true,
   network,
   fee: 100000,

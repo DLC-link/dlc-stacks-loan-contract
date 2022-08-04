@@ -8,12 +8,22 @@ plan:
     - id: 0
       transactions:
         - contract-publish:
+            contract-name: dlc-create-callback-trait
+            expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/dlc-create-callback-trait.clar
+            cost: 1210
+        - contract-publish:
             contract-name: redstone-verify
             expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: contracts/external/redstone-verify.clar
             cost: 45390
         - contract-publish:
-            contract-name: dlc-manager-pricefeed-v1-01
+            contract-name: dlc-manager-pricefeed-v1-02
             expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: contracts/dlc-manager-pricefeed.clar
-            cost: 62730
+            cost: 66520
+        - contract-publish:
+            contract-name: sample-protocol-contract
+            expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: example/sample-protocol-contract.clar
+            cost: 19700

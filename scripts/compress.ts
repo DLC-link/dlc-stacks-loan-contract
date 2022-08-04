@@ -1,4 +1,4 @@
-import { compressRedstonePubkey, hexToBytes, liteDataHash, liteDataHashPersonalSign, liteSignatureToStacksSignature } from "../src/stacks-redstone";
+import { compressRedstonePubkey, hexToBytes, liteDataHash, liteDataHashPersonalSign, liteSignatureToStacksSignature } from './lib/stacks-redstone';
 import { bytesToHex } from "micro-stacks/common";
 
 // publick keys for nodes can be found here https://github.com/redstone-finance/redstone-node/blob/main/src/config/nodes.json
