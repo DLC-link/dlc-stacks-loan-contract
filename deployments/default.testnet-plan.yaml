@@ -2,13 +2,21 @@
 id: 0
 name: Testnet deployment
 network: testnet
-node: "https://stacks-node-api.testnet.stacks.co"
+stacks-node: "https://stacks-node-api.testnet.stacks.co"
+bitcoin-node: "http://blockstack:blockstacksystem@bitcoind.testnet.stacks.co:18332"
 plan:
   batches:
     - id: 0
       transactions:
         - contract-publish:
+            contract-name: dlc-create-callback-trait
+            expected-sender: ST12S2DB1PKRM1BJ1G5BQS0AB0QPKHRVHWXDBJ27R
+            cost: 1250
+            path: contracts/dlc-create-callback-trait.clar
+            anchor-block-only: true
+        - contract-publish:
             contract-name: dlc-manager-pricefeed-v1-02
             expected-sender: ST12S2DB1PKRM1BJ1G5BQS0AB0QPKHRVHWXDBJ27R
+            cost: 83790
             path: contracts/dlc-manager-pricefeed.clar
-            cost: 63690
+            anchor-block-only: true

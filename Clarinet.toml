@@ -8,16 +8,15 @@ contract_id = "STDBEG5X8XD50SPM1JJH0E5CTXGDV5NJTJTTH7YB.redstone-verify"
 path = "contracts/dlc-manager-pricefeed.clar"
 depends_on = ["dlc-create-callback-trait"]
 
+[contracts.dlc-create-callback-trait]
+path = "contracts/dlc-create-callback-trait.clar"
+depends_on = ["dlc-create-callback-trait"]
 
 ##### Development contracts:
 
 # [contracts.redstone-verify]
 # path = "contracts/external/redstone-verify.clar"
 # depends_on = []
-
-# [contracts.dlc-create-callback-trait]
-# path = "contracts/dlc-create-callback-trait.clar"
-# depends_on = ["dlc-create-callback-trait"]
 
 # [contracts.sample-protocol-contract]
 # path = "example/sample-protocol-contract.clar"
