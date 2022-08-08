@@ -1,7 +1,8 @@
 import {
   network,
-  senderKey,
-  contractAddress
+  exampleContractAddress,
+  exampleContractName,
+  protocolPrivateKey
 } from "./common";
 
 import {
@@ -10,17 +11,15 @@ import {
   contractPrincipalCV,
 } from "@stacks/transactions";
 
-const protocolContractName = "sample-protocol-contract"
-
 // Replace this with the options required for your contract.
 const txOptions = {
-  contractAddress: contractAddress,
-  contractName: protocolContractName,
+  contractAddress: exampleContractAddress,
+  contractName: exampleContractName,
   functionName: "setup-user-contract",
   functionArgs: [
-    contractPrincipalCV(contractAddress, protocolContractName)
+    contractPrincipalCV(exampleContractAddress, exampleContractName)
   ],
-  senderKey: senderKey,
+  senderKey: protocolPrivateKey,
   validateWithAbi: true,
   network,
   fee: 100000,

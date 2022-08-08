@@ -1,17 +1,17 @@
-import { network, senderKey, contractAddress, contractName, UUID, testCreatorKey } from './common'
-import { makeContractCall, broadcastTransaction, bufferCVFromString, uintCV } from "@stacks/transactions";
+import { network, protocolPrivateKey, exampleContractName, exampleContractAddress } from './common'
+import { makeContractCall, broadcastTransaction, uintCV } from "@stacks/transactions";
 
 const functionName = "close-dlc";
 
 function populateTxOptions() {
   return {
-    contractAddress: contractAddress,
-    contractName: "sample-protocol-contract",
+    contractAddress: exampleContractAddress,
+    contractName: exampleContractName,
     functionName: functionName,
     functionArgs: [
-      uintCV(1)
+      uintCV(2)
     ],
-    senderKey: senderKey,
+    senderKey: protocolPrivateKey,
     validateWithAbi: true,
     network,
     fee: 100000, //0.1STX

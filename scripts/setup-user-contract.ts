@@ -1,12 +1,12 @@
 import {
   network,
-  senderKey,
   contractAddress,
-  contractName,
   assetName,
   unixTimeStamp,
   strikePrice,
-  testCreatorKey
+  protocolPrivateKey,
+  exampleContractAddress,
+  exampleContractName
 } from "./common";
 
 import {
@@ -20,8 +20,8 @@ const functionName = "setup-user-contract";
 
 // Replace this with the options required for your contract.
 const txOptions = {
-  contractAddress: contractAddress,
-  contractName: "sample-protocol-contract",
+  contractAddress: exampleContractAddress,
+  contractName: exampleContractName,
   functionName: functionName,
   functionArgs: [
     bufferCVFromString(assetName), // asset
@@ -29,7 +29,7 @@ const txOptions = {
     uintCV(unixTimeStamp), // closing-time
     uintCV(unixTimeStamp), // emergency-refund-time
   ],
-  senderKey: senderKey,
+  senderKey: protocolPrivateKey,
   validateWithAbi: true,
   network,
   fee: 100000,
