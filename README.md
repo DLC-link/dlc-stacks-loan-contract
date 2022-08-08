@@ -95,12 +95,15 @@ Create a `.env` file with the following fields:
 ```js
 NODE_ENV=[ENV]
 PRIVATE_KEY=[PRIVATE_KEY]
+PROTOCOL_PRIVATE_KEY=[PROTOCOL_PRIVATE_KEY]
 MNEMONIC=[MNEMONIC]
 ```
 
 `ENV`: 'mocknet' | 'testnet' | 'mainnet'
 
 `PRIVATE_KEY`: your private key on the given chain (can be extracted with pk-extractor.js)
+
+`PROTOCOL_PRIVATE_KEY`: the private key used to deploy a sample protocol contract (see examples/protocol-contract-contract.clar)
 
 `MNEMONIC`: your mnenomic seed phrase (only required for the pk-extractor.js)
 
