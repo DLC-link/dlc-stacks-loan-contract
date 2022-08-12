@@ -56,7 +56,7 @@ const liquidationFee = 10;
 const vaultLoanAmount = 20000;
 
 let dlc = new DLC(vaultLoanAmount, BTCDeposit, liquidationRatio, liquidationFee);
-if (dlc.calculateLTV(BTCInitialPrice) > 50) throw "LTV exceeds maximum amount, quitting"; 
+if (dlc.calculateLTV(BTCInitialPrice) > maxLTV) throw "LTV exceeds maximum amount, quitting"; 
 
 console.log(`Initial LTV: ${dlc.calculateLTV(BTCInitialPrice)}`);
 
