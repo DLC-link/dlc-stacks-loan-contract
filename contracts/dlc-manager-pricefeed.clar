@@ -15,10 +15,10 @@
 (define-constant contract-owner tx-sender)
 
 ;; Current contract's name
-(define-constant dlc-manager-contract .dlc-manager-pricefeed-v1-02)
+(define-constant dlc-manager-contract .dlc-manager-pricefeed-v2-01)
 
 ;; Importing the trait to use it as a type
-(use-trait cb-trait .dlc-create-callback-trait.dlc-create-callback-trait)
+(use-trait cb-trait .dlc-link-callback-trait.dlc-link-callback-trait)
 
 ;; A map of all trusted oracles, indexed by their 33 byte compressed public key.
 (define-map trusted-oracles (buff 33) bool)
@@ -33,8 +33,8 @@
   (buff 8)
   {
     uuid: (buff 8),
-    asset: (buff 32),
-    closing-time: uint,  ;;seconds because stacks block has the timestamp in seconds
+    vault-loan-amount: uint,
+    liquidation-ratio: uint,
     closing-price: (optional uint), ;; none means it is still open
     actual-closing-time: uint,
     emergency-refund-time: uint,
@@ -48,85 +48,90 @@
   (map-get? dlcs uuid))
 
 ;;emits an event - see README for more details
-;;asset: the ticker symbol for the asset that will be used to closing price data, e.g. 'btc' (https://github.com/redstone-finance/redstone-api/blob/main/docs/ALL_SUPPORTED_TOKENS.md)
-;;strike-price: the over/under price for the DLC bet
-;;closing-time: the UTC time in seconds after which the contract can be closed
+;;vault-loan-amount
+;;liquidation-ratio
 ;;emergency-refund-time: the time at which the DLC will be available for refund
 ;;callback-contract: the contract-principal where the create-dlc-internal will call back to
 ;;nonce provided for the dlc by the sample-protocol-contract to connect it to the resulting uuid
-(define-public (create-dlc (asset (buff 32)) (strike-price uint) (closing-time uint) (emergency-refund-time uint) (callback-contract principal) (nonce uint))
-  (begin 
-    (asserts! (is-eq callback-contract tx-sender) err-unauthorised)
-    (print {
-      asset: asset, 
-      strike-price: strike-price,
-      closing-time: closing-time, 
-      emergency-refund-time: emergency-refund-time,
-      creator: tx-sender,
-      callback-contract: callback-contract,
-      nonce: nonce,
-      event-source: "dlclink:create-dlc:v1" })
+(define-public (create-dlc (vault-loan-amount uint) (liquidation-ratio uint) (emergency-refund-time uint) (callback-contract principal) (nonce uint))
+  (let (
+    (strike-price (/ u100 (* vault-loan-amount liquidation-ratio)))
+    ) 
+    (begin
+      (asserts! (is-eq callback-contract tx-sender) err-unauthorised)
+      (print {
+        vault-loan-amount: vault-loan-amount, 
+        liquidation-ratio: liquidation-ratio,
+        emergency-refund-time: emergency-refund-time,
+        creator: tx-sender,
+        callback-contract: callback-contract,
+        nonce: nonce,
+        event-source: "dlclink:create-dlc:v2" 
+      })
       (ok true)
-    ))
+    )
+  ) 
+)
 
 ;;opens a new dlc - called by the DLC Oracle system
-(define-public (create-dlc-internal (uuid (buff 8)) (asset (buff 32)) (closing-time uint) (emergency-refund-time uint) (creator principal) (callback-contract <cb-trait>) (nonce uint))
+(define-public (create-dlc-internal (uuid (buff 8)) (vault-loan-amount uint) (liquidation-ratio uint) (emergency-refund-time uint) (creator principal) (callback-contract <cb-trait>) (nonce uint))
   (begin
     (asserts! (is-eq contract-owner tx-sender) err-unauthorised)
     (asserts! (is-none (map-get? dlcs uuid)) err-dlc-already-added)
     (map-set dlcs uuid {
       uuid: uuid, 
-      asset: asset, 
-      closing-time: closing-time, 
+      vault-loan-amount: vault-loan-amount,
+      liquidation-ratio: liquidation-ratio,
       closing-price: none, 
       actual-closing-time: u0, 
       emergency-refund-time: emergency-refund-time,
       creator: creator })
     (print {
       uuid: uuid, 
-      asset: asset, 
-      closing-time: closing-time,
+      vault-loan-amount: vault-loan-amount, 
+      liquidation-ratio: liquidation-ratio,
       emergency-refund-time: emergency-refund-time,
       creator: creator,
-      event-source: "dlclink:create-dlc-internal:v1" })
+      event-source: "dlclink:create-dlc-internal:v2" 
+    })
     (try! (contract-call? callback-contract post-create-dlc-handler nonce uuid))
     (nft-mint? open-dlc uuid dlc-manager-contract))) ;;mint an open-dlc nft to keep track of open dlcs
 
-;; External close-dlc request
+;; Regular, repaid loan closing 
 (define-public (close-dlc (uuid (buff 8)))
   (let (
-    (dlc (unwrap! (get-dlc uuid) err-unknown-dlc))
-    (block-timestamp (get-last-block-timestamp))
+      (dlc (unwrap! (get-dlc uuid) err-unknown-dlc))
     )
     (asserts! (or (is-eq contract-owner tx-sender) (is-eq (get creator dlc) tx-sender)) err-unauthorised)
     (asserts! (is-none (get closing-price dlc)) err-already-closed)
-    (asserts! (>= block-timestamp (get closing-time dlc)) err-not-reached-closing-time)
     (print { 
       uuid: uuid, 
-      asset: (get asset dlc),
-      closing-time: (get closing-time dlc),
-      event-source: "dlclink:close-dlc:v1"
+      vault-loan-amount: (get vault-loan-amount dlc),
+      event-source: "dlclink:close-dlc:v2"
       })
     (ok true)
   ))
 
-;; Early close request -- admin only
-(define-public (early-close-dlc (uuid (buff 8))) 
+;; Liquidating close request
+(define-public (close-dlc-liquidate (uuid (buff 8))) 
   (let (
     (dlc (unwrap! (get-dlc uuid) err-unknown-dlc))
     )
+    ;; (asserts! (or (is-eq contract-owner tx-sender) (is-eq (get creator dlc) tx-sender)) err-unauthorised)
     (asserts! (is-none (get closing-price dlc)) err-already-closed)
-    (asserts! (is-eq contract-owner tx-sender) err-unauthorised)
     (print { 
       uuid: uuid, 
-      asset: (get asset dlc) ,
-      closing-time: (get closing-time dlc),
-      event-source: "dlclink:early-close-dlc:v1" 
+      vault-loan-amount: (get vault-loan-amount dlc),
+      liquidation-ratio: (get liquidation-ratio dlc),
+      caller: tx-sender,
+      event-source: "dlclink:early-close-dlc:v2" 
       })
     (ok true)
   ))
 
 ;;Close the dlc with the oracle data. This is called by the DLC Oracle service
+;; TODO: call back to the closecallback
+;; TODO: check if liquidation should happen
 (define-public (close-dlc-internal (uuid (buff 8)) (timestamp uint) (entries (list 10 {symbol: (buff 32), value: uint})) (signature (buff 65)))
   (let (
     ;; Recover the pubkey of the signer.
@@ -140,14 +145,15 @@
     ;; Check if the data is not stale, depending on how the app is designed.
     (asserts! (> timestamp block-timestamp) err-stale-data) ;; timestamp should be larger than the last block timestamp.
     ;;DLC related checks
-    (asserts! (is-eq (unwrap-panic (get symbol (element-at entries u0))) (get asset dlc)) err-not-the-same-assets) ;;check if the submitted asset is the same what was logged in the DLC
+    ;; (asserts! (is-eq (unwrap-panic (get symbol (element-at entries u0))) (get asset dlc)) err-not-the-same-assets) ;;check if the submitted asset is the same what was logged in the DLC
     (asserts! (is-none (get closing-price dlc)) err-already-closed)
     (map-set dlcs uuid (merge dlc { closing-price: (get value (element-at entries u0)), actual-closing-time: (/ timestamp u1000) })) ;;timestamp is in milliseconds so we have to convert it to seconds to keep the timestamps consistent
     (print {
       uuid: uuid,
       closing-price: (get value (element-at entries u0)),
+      ;; TODO: print payout-ratio
       actual-closing-time: (/ timestamp u1000),
-      event-source: "dlclink:close-dlc-internal:v1" })
+      event-source: "dlclink:close-dlc-internal:v2" })
     (nft-burn? open-dlc uuid dlc-manager-contract))) ;;burn the open-dlc nft related to the UUID
 
 ;; get the closing price of the DLC by UUID
@@ -181,7 +187,7 @@
     (asserts! (is-eq contract-owner tx-sender) err-not-contract-owner)
     (print { 
       contract-address: contract-address,
-      event-source: "dlclink:register-contract:v1" })
+      event-source: "dlclink:register-contract:v2" })
     (nft-mint? registered-contract (contract-of contract-address) dlc-manager-contract)
   )
 )
@@ -191,7 +197,7 @@
     (asserts! (is-eq contract-owner tx-sender) err-not-contract-owner)
     (print { 
       contract-address: contract-address,
-      event-source: "dlclink:unregister-contract:v1" })
+      event-source: "dlclink:unregister-contract:v2" })
     (nft-burn? registered-contract (contract-of contract-address) dlc-manager-contract)
   )
 )
