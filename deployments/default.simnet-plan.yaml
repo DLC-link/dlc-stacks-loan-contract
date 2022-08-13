@@ -43,22 +43,14 @@ plan:
     - id: 0
       transactions:
         - emulated-contract-publish:
-            contract-name: dlc-create-callback-trait
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/dlc-create-callback-trait.clar
-        - emulated-contract-publish:
             contract-name: redstone-verify
             emulated-sender: STDBEG5X8XD50SPM1JJH0E5CTXGDV5NJTJTTH7YB
-            path: contracts/external/redstone-verify.clar
+            path: ".requirements/STDBEG5X8XD50SPM1JJH0E5CTXGDV5NJTJTTH7YB.redstone-verify.clar"
+        - emulated-contract-publish:
+            contract-name: dlc-link-callback-trait
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/dlc-link-callback-trait.clar
         - emulated-contract-publish:
             contract-name: dlc-manager-pricefeed-v1-02
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: contracts/dlc-manager-pricefeed.clar
-        - emulated-contract-publish:
-            contract-name: sample-protocol-contract
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: example/sample-protocol-contract.clar
-        - emulated-contract-publish:
-            contract-name: callback-contract
-            emulated-sender: STNHKEPYEPJ8ET55ZZ0M5A34J0R3N5FM2CMMMAZ6
-            path: tests/callback-contract-mock.clar

@@ -9,10 +9,10 @@ plan:
     - id: 0
       transactions:
         - contract-publish:
-            contract-name: dlc-create-callback-trait
+            contract-name: dlc-link-callback-trait
             expected-sender: ST12S2DB1PKRM1BJ1G5BQS0AB0QPKHRVHWXDBJ27R
             cost: 1250
-            path: contracts/dlc-create-callback-trait.clar
+            path: contracts/dlc-link-callback-trait.clar
             anchor-block-only: true
         - contract-publish:
             contract-name: dlc-manager-pricefeed-v1-02
