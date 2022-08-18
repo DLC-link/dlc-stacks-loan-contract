@@ -10,6 +10,10 @@
 (define-constant err-already-passed-closing-time (err u2006))
 (define-constant err-not-closed (err u2007))
 (define-constant err-not-the-same-assets (err u2008))
+(define-constant err-does-not-need-liquidation (err u3000))
+
+(define-constant value-shift u100000000)
+(define-constant value-shift-squared u10000000000000000)
 
 ;; Contract owner
 (define-constant contract-owner tx-sender)
@@ -29,12 +33,16 @@
 ;; NFT to keep track of registered contracts
 (define-non-fungible-token registered-contract principal)
 
+
 (define-map dlcs
   (buff 8)
   {
     uuid: (buff 8),
     vault-loan-amount: uint,
     liquidation-ratio: uint,
+    liquidation-fee: uint,
+    strike-price: uint,
+    btc-deposit: uint,
     closing-price: (optional uint), ;; none means it is still open
     actual-closing-time: uint,
     emergency-refund-time: uint,
@@ -48,20 +56,25 @@
   (map-get? dlcs uuid))
 
 ;;emits an event - see README for more details
-;;vault-loan-amount
-;;liquidation-ratio
+;;vault-loan-amount : the borrowed USDA amount in the vault
+;;btc-deposit : the deposited BTC amount, in Sats (shifted by 10**8)
+;;liquidation-ratio: e.g. 140
+;;liquidation-fee : e.g. 10
 ;;emergency-refund-time: the time at which the DLC will be available for refund
 ;;callback-contract: the contract-principal where the create-dlc-internal will call back to
 ;;nonce provided for the dlc by the sample-protocol-contract to connect it to the resulting uuid
-(define-public (create-dlc (vault-loan-amount uint) (liquidation-ratio uint) (emergency-refund-time uint) (callback-contract principal) (nonce uint))
+(define-public (create-dlc (vault-loan-amount uint) (btc-deposit uint) (liquidation-ratio uint) (liquidation-fee uint) (emergency-refund-time uint) (callback-contract principal) (nonce uint))
   (let (
-    (strike-price (/ u100 (* vault-loan-amount liquidation-ratio)))
+    (strike-price (/ (* vault-loan-amount liquidation-ratio) u100))
     ) 
     (begin
       (asserts! (is-eq callback-contract tx-sender) err-unauthorised)
       (print {
         vault-loan-amount: vault-loan-amount, 
+        btc-deposit: btc-deposit,
         liquidation-ratio: liquidation-ratio,
+        liquidation-fee: liquidation-fee,
+        strike-price: strike-price,
         emergency-refund-time: emergency-refund-time,
         creator: tx-sender,
         callback-contract: callback-contract,
@@ -74,7 +87,7 @@
 )
 
 ;;opens a new dlc - called by the DLC Oracle system
-(define-public (create-dlc-internal (uuid (buff 8)) (vault-loan-amount uint) (liquidation-ratio uint) (emergency-refund-time uint) (creator principal) (callback-contract <cb-trait>) (nonce uint))
+(define-public (create-dlc-internal (uuid (buff 8)) (vault-loan-amount uint) (btc-deposit uint) (liquidation-ratio uint) (liquidation-fee uint) (strike-price uint) (emergency-refund-time uint) (creator principal) (callback-contract <cb-trait>) (nonce uint))
   (begin
     (asserts! (is-eq contract-owner tx-sender) err-unauthorised)
     (asserts! (is-none (map-get? dlcs uuid)) err-dlc-already-added)
@@ -82,6 +95,9 @@
       uuid: uuid, 
       vault-loan-amount: vault-loan-amount,
       liquidation-ratio: liquidation-ratio,
+      liquidation-fee: liquidation-fee,
+      strike-price: strike-price,
+      btc-deposit: btc-deposit,
       closing-price: none, 
       actual-closing-time: u0, 
       emergency-refund-time: emergency-refund-time,
@@ -90,6 +106,9 @@
       uuid: uuid, 
       vault-loan-amount: vault-loan-amount, 
       liquidation-ratio: liquidation-ratio,
+      liquidation-fee: liquidation-fee,
+      strike-price: strike-price,
+      btc-deposit: btc-deposit,
       emergency-refund-time: emergency-refund-time,
       creator: creator,
       event-source: "dlclink:create-dlc-internal:v2" 
@@ -156,16 +175,91 @@
       event-source: "dlclink:close-dlc-internal:v2" })
     (nft-burn? open-dlc uuid dlc-manager-contract))) ;;burn the open-dlc nft related to the UUID
 
-;; get the closing price of the DLC by UUID
-(define-read-only (get-dlc-closing-price-and-time (uuid (buff 8)))
-(let (
+;;Checks if a given DLC needs liquidation at the given btc-price (shifted by 10**8)
+(define-read-only (check-liquidation (uuid (buff 8)) (btc-price uint)) 
+  (let (
     (dlc (unwrap! (get-dlc uuid) err-unknown-dlc))
+    (collateral-value (get-collateral-value (get btc-deposit dlc) btc-price))
     )
-    (asserts! (is-some (get closing-price dlc)) err-not-closed)
-    (ok {
-      closing-price: (get closing-price dlc),
-      closing-time: (get closing-time dlc)
-    })))
+    (ok (<= collateral-value (get strike-price dlc)))
+  )
+)
+
+;; TODO: return back to read-only
+;; Return the resulting payout-curve-value at the given btc-price (shifted by 10**8)
+;; using uints, this means return values between 0-10000000000
+(define-public (get-payout-curve-value (uuid (buff 8)) (btc-price uint))
+  (let (
+    (dlc (unwrap! (get-dlc uuid) err-unknown-dlc))
+    (collateral-value (get-collateral-value (get btc-deposit dlc) btc-price))
+    (sell-to-liquidators-ratio (/ (shift-value (shift-value (get vault-loan-amount dlc))) collateral-value))
+
+    ;; (to-protocol (* sell-to-liquidators-ratio (unshift-value (get btc-deposit dlc))))
+    ;; (total-to-protocol (+ to-protocol (* (/ to-protocol u100) (get liquidation-fee dlc))))
+    ;; (to-user (- (unshift-value (get btc-deposit dlc)) total-to-protocol))
+    
+    (payout-curve-value (* sell-to-liquidators-ratio (+ u100 (get liquidation-fee dlc))))
+    (payout-curve-unshifted (unshift-value payout-curve-value))
+    
+    )
+    (begin 
+      (print {
+        collateral-value: collateral-value,
+        sell-to-liquidators-ratio: sell-to-liquidators-ratio,
+        ;; to-protocol: to-protocol,
+        ;; total-to-protocol: total-to-protocol,
+        ;; to-user: to-user,
+        payout-curve-unshifted: payout-curve-unshifted })
+
+      (if (<= collateral-value (get strike-price dlc))
+          (if (>= payout-curve-unshifted (shift-value u100)) 
+            (ok (shift-value u100)) 
+            (ok payout-curve-unshifted))
+        (ok u0)
+      )  
+    )
+  )
+)
+
+;; FOR TESTING, TODO: REMOVE BEFORE PRODUCTION
+(define-public (add-dlc (uuid (buff 8)) (vault-loan-amount uint) (btc-deposit uint) (liquidation-ratio uint) (liquidation-fee uint) (strike-price uint) (emergency-refund-time uint)) 
+  (begin (map-set dlcs uuid {
+      uuid: uuid, 
+      vault-loan-amount: vault-loan-amount,
+      liquidation-ratio: liquidation-ratio,
+      liquidation-fee: liquidation-fee,
+      strike-price: strike-price,
+      btc-deposit: btc-deposit,
+      closing-price: none, 
+      actual-closing-time: u0, 
+      emergency-refund-time: u0,
+      creator: tx-sender }) 
+    (ok true)
+  )
+)
+
+(define-private (get-collateral-value (btc-deposit uint) (btc-price uint))
+  (/ (* btc-deposit btc-price) value-shift-squared)
+)
+
+(define-private (shift-value (value uint))
+  (* value value-shift)
+)
+
+(define-private (unshift-value (value uint))
+  (/ value value-shift)
+)
+
+;; get the closing price of the DLC by UUID
+;; (define-read-only (get-dlc-closing-price-and-time (uuid (buff 8)))
+;; (let (
+;;     (dlc (unwrap! (get-dlc uuid) err-unknown-dlc))
+;;     )
+;;     (asserts! (is-some (get closing-price dlc)) err-not-closed)
+;;     (ok {
+;;       closing-price: (get closing-price dlc),
+;;       closing-time: (get closing-time dlc)
+;;     })))
 
 
 (define-read-only (is-trusted-oracle (pubkey (buff 33)))
