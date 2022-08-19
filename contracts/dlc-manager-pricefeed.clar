@@ -17,6 +17,10 @@
 (define-constant value-shift u100000000)
 (define-constant value-shift-squared u10000000000000000)
 
+;; status enums
+(define-constant status-open u0)
+(define-constant status-closed u1)
+
 ;; Contract owner
 (define-constant contract-owner tx-sender)
 
@@ -44,10 +48,11 @@
     liquidation-fee: uint,
     strike-price: uint,
     btc-deposit: uint,
-    closing-price: (optional uint), ;; none means it is still open
+    closing-price: (optional uint),
     actual-closing-time: uint,
     emergency-refund-time: uint,
-    creator: principal
+    creator: principal,
+    status: uint
   })
 
 (define-read-only (get-last-block-timestamp)
@@ -55,6 +60,12 @@
 
 (define-read-only (get-dlc (uuid (buff 8)))
   (map-get? dlcs uuid))
+
+(define-private (shift-value (value uint))
+  (* value value-shift))
+
+(define-private (unshift-value (value uint))
+  (/ value value-shift))
 
 ;;emits an event - see README for more details
 ;;vault-loan-amount : the borrowed USDA amount in the vault
@@ -102,7 +113,8 @@
       closing-price: none, 
       actual-closing-time: u0, 
       emergency-refund-time: emergency-refund-time,
-      creator: creator })
+      creator: creator,
+      status: status-open })
     (print {
       uuid: uuid, 
       vault-loan-amount: vault-loan-amount, 
@@ -117,17 +129,15 @@
     (try! (contract-call? callback-contract post-create-dlc-handler nonce uuid))
     (nft-mint? open-dlc uuid dlc-manager-contract))) ;;mint an open-dlc nft to keep track of open dlcs
 
-;; Regular, repaid loan closing 
+;; Regular, repaid loan closing request
 (define-public (close-dlc (uuid (buff 8)))
   (let (
       (dlc (unwrap! (get-dlc uuid) err-unknown-dlc))
     )
     (asserts! (or (is-eq contract-owner tx-sender) (is-eq (get creator dlc) tx-sender)) err-unauthorised)
-    (asserts! (is-none (get closing-price dlc)) err-already-closed)
+    (asserts! (is-eq (get status dlc) status-open) err-already-closed)
     (print { 
       uuid: uuid,
-      ;; TODO: what sort of data shall we hand back here?
-      vault-loan-amount: (get vault-loan-amount dlc),
       caller: tx-sender,
       event-source: "dlclink:close-dlc:v2"
       })
@@ -139,29 +149,25 @@
   (let (
     (dlc (unwrap! (get-dlc uuid) err-unknown-dlc))
     )
-    ;; (asserts! (or (is-eq contract-owner tx-sender) (is-eq (get creator dlc) tx-sender)) err-unauthorised)
-    (asserts! (is-none (get closing-price dlc)) err-already-closed)
+    (asserts! (is-eq (get status dlc) status-open) err-already-closed)
     (print { 
       uuid: uuid,
-      ;; TODO: what sort of data shall we hand back here?
-      vault-loan-amount: (get vault-loan-amount dlc),
-      liquidation-ratio: (get liquidation-ratio dlc),
       caller: tx-sender,
       event-source: "dlclink:close-dlc-liquidate:v2" 
       })
     (ok true)
   ))
 
-(define-public (close-dlc-internal (uuid (buff 8)) (timestamp uint) (callback-contract <cb-trait>)) 
+;; Regular closing of a DLC, without price data. Called by the DLC oracle service
+(define-public (close-dlc-internal (uuid (buff 8)) (callback-contract <cb-trait>)) 
 (let (
     (dlc (unwrap! (get-dlc uuid) err-unknown-dlc))
     )
-    ;; TODO: closing-price and actual-closing-time is basically irrelevant here, if we move closing-status to something else
-    (asserts! (is-none (get closing-price dlc)) err-already-closed)
-    (map-set dlcs uuid (merge dlc { closing-price: (some u0), actual-closing-time: (/ timestamp u1000) }))
+    (asserts! (is-eq contract-owner tx-sender) err-unauthorised)
+    (asserts! (is-eq (get status dlc) status-open) err-already-closed)
+    (map-set dlcs uuid (merge dlc { status: status-closed }))
     (print {
       uuid: uuid,
-      actual-closing-time: (/ timestamp u1000),
       event-source: "dlclink:close-dlc-internal:v2" })
     (try! (contract-call? callback-contract post-close-dlc-handler uuid u0))
     (nft-burn? open-dlc uuid dlc-manager-contract)))
@@ -182,8 +188,8 @@
     (asserts! (is-trusted-oracle signer) err-untrusted-oracle)
     ;; Check if the data is not stale, depending on how the app is designed.
     (asserts! (> timestamp block-timestamp) err-stale-data) ;; timestamp should be larger than the last block timestamp.
-    (asserts! (is-none (get closing-price dlc)) err-already-closed)
-    (map-set dlcs uuid (merge dlc { closing-price: (get value (element-at entries u0)), actual-closing-time: (/ timestamp u1000) })) ;;timestamp is in milliseconds so we have to convert it to seconds to keep the timestamps consistent
+    (asserts! (is-eq (get status dlc) status-open) err-already-closed)
+    (map-set dlcs uuid (merge dlc { closing-price: (get value (element-at entries u0)), actual-closing-time: (/ timestamp u1000), status: status-closed })) ;;timestamp is in milliseconds so we have to convert it to seconds to keep the timestamps consistent
     (print {
       uuid: uuid,
       payout-curve-value: (get-payout-curve-value uuid price),
@@ -228,31 +234,10 @@
   (/ (* btc-deposit btc-price) value-shift-squared)
 )
 
-(define-private (shift-value (value uint))
-  (* value value-shift)
-)
-
-(define-private (unshift-value (value uint))
-  (/ value value-shift)
-)
-
-;; get the closing price of the DLC by UUID
-;; (define-read-only (get-dlc-closing-price-and-time (uuid (buff 8)))
-;; (let (
-;;     (dlc (unwrap! (get-dlc uuid) err-unknown-dlc))
-;;     )
-;;     (asserts! (is-some (get closing-price dlc)) err-not-closed)
-;;     (ok {
-;;       closing-price: (get closing-price dlc),
-;;       closing-time: (get closing-time dlc)
-;;     })))
-
-
 (define-read-only (is-trusted-oracle (pubkey (buff 33)))
   (default-to false (map-get? trusted-oracles pubkey))
 )
 
-;; #[allow(unchecked_data)]
 (define-public (set-trusted-oracle (pubkey (buff 33)) (trusted bool))
   (begin
     (asserts! (is-eq contract-owner tx-sender) err-not-contract-owner)

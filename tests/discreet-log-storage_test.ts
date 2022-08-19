@@ -21,8 +21,8 @@ const trustedOraclePubkey = "0x035ca791fed34bf9e9d54c0ce4b9626e1382cf13daa46aa58
 const untrustedOraclePubkey = "0x03cd2cfdbd2ad9332828a7a13ef62cb999e063421c708e863a7ffed71fb61c88c9";
 
 const pricePackage: PricePackage = {
-    timestamp: 1647332581,
-    prices: [{ symbol: "BTC", value: 23501.669932 }]
+  timestamp: 1647332581,
+  prices: [{ symbol: "BTC", value: 23501.669932 }]
 }
 
 const pricePackageLow: PricePackage = {
@@ -31,8 +31,8 @@ const pricePackageLow: PricePackage = {
 }
 
 const pricePackageWrong: PricePackage = {
-    timestamp: 1647332581,
-    prices: [{ symbol: "ETH", value: 2.5 }]
+  timestamp: 1647332581,
+  prices: [{ symbol: "ETH", value: 2.5 }]
 }
 
 const packageCV = pricePackageToCV(pricePackage);
@@ -43,18 +43,18 @@ const signature = "0x4ee83f2bdc6d67619e13c5786c42aa66a899cc63229310400247bac0dd2
 
 const lowSignature = "0x3256910f5d0788ee308baecd3787a36ab2e3a8ff3fb4d0fc4638c84ba48957b82876b71eb58751366dd7a8a6ae1f2040120706742676ddc2187170932bb344e901";
 
-const wrongPackageSingature = "0x5cf7810162047b1dd7f9788259431bc971f3be913c5a7875169f78f3a83b7ed662c068fd55000a37c7fcbb3881b31f59d707a5d33163bb7f4280ba43efb48f5800";
+const wrongPackageSignature = "0x5cf7810162047b1dd7f9788259431bc971f3be913c5a7875169f78f3a83b7ed662c068fd55000a37c7fcbb3881b31f59d707a5d33163bb7f4280ba43efb48f5800";
 
 function setTrustedOracle(chain: Chain, senderAddress: string): Block {
-    return chain.mineBlock([
-        Tx.contractCall(dlcManagerContract, "set-trusted-oracle", [trustedOraclePubkey, types.bool(true)], senderAddress),
-    ]);
+  return chain.mineBlock([
+      Tx.contractCall(dlcManagerContract, "set-trusted-oracle", [trustedOraclePubkey, types.bool(true)], senderAddress),
+  ]);
 }
 
-function createNewDLC(chain: Chain, deployer: Account, callbackContract: string) {
+function createNewDLC(chain: Chain, deployer: Account, callbackContract: string, loanParams: {vaultAmount: number, btcDeposit: number, liquidationRatio: number, liquidationFee: number, strikePrice: number} = {vaultAmount: 10000, btcDeposit: 1, liquidationRatio: 140, liquidationFee: 10, strikePrice: 14000 }) {
 
   const block = chain.mineBlock([
-      Tx.contractCall(dlcManagerContract, "create-dlc-internal", [types.buff(UUID), types.uint(10000), types.uint(shiftPriceValue(1)), types.uint(140), types.uint(10), types.uint(14000), types.uint(10), types.principal(callbackContract), types.principal(callbackContract), types.uint(1)], deployer.address)
+    Tx.contractCall(dlcManagerContract, "create-dlc-internal", [types.buff(UUID), types.uint(loanParams.vaultAmount), types.uint(shiftPriceValue(loanParams.btcDeposit)), types.uint(loanParams.liquidationRatio), types.uint(loanParams.liquidationFee), types.uint(loanParams.strikePrice), types.uint(10), types.principal(callbackContract), types.principal(callbackContract), types.uint(1)], deployer.address)
   ]);
 
   block.receipts[0].result.expectOk().expectBool(true);
@@ -65,92 +65,90 @@ function createNewDLC(chain: Chain, deployer: Account, callbackContract: string)
 }
 
 Clarinet.test({
-    name: "Contract owner can set trusted oracle",
-    async fn(chain: Chain, accounts: Map<string, Account>) {
-        const deployer = accounts.get("deployer")!;
-        const block = setTrustedOracle(chain, deployer.address);
-        const [receipt] = block.receipts;
-        receipt.result.expectOk().expectBool(true);
-        const trusted = chain.callReadOnlyFn(dlcManagerContract, "is-trusted-oracle", [trustedOraclePubkey], deployer.address);
-        const untrusted = chain.callReadOnlyFn(dlcManagerContract, "is-trusted-oracle", [untrustedOraclePubkey], deployer.address);
-        trusted.result.expectBool(true);
-        untrusted.result.expectBool(false);
-    },
+  name: "Contract owner can set trusted oracle",
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+      const deployer = accounts.get("deployer")!;
+      const block = setTrustedOracle(chain, deployer.address);
+      const [receipt] = block.receipts;
+      receipt.result.expectOk().expectBool(true);
+      const trusted = chain.callReadOnlyFn(dlcManagerContract, "is-trusted-oracle", [trustedOraclePubkey], deployer.address);
+      const untrusted = chain.callReadOnlyFn(dlcManagerContract, "is-trusted-oracle", [untrustedOraclePubkey], deployer.address);
+      trusted.result.expectBool(true);
+      untrusted.result.expectBool(false);
+  },
 });
 
 Clarinet.test({
-    name: "create-dlc called from a protocol-contract emits a dlclink event with the correct strike-price",
-    async fn(chain: Chain, accounts: Map<string, Account>) {
-        const deployer_2 = accounts.get('deployer_2')!;
+  name: "create-dlc called from a protocol-contract emits a dlclink event with the correct strike-price",
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+      const deployer_2 = accounts.get('deployer_2')!;
 
-        let block = chain.mineBlock([
-            Tx.contractCall(contractPrincipal(deployer_2, callbackContract), "create-dlc-request", [types.uint(10000), types.uint(shiftPriceValue(1)), types.uint(140), types.uint(10), types.uint(10)], deployer_2.address)
-        ]);
+      let block = chain.mineBlock([
+          Tx.contractCall(contractPrincipal(deployer_2, callbackContract), "create-dlc-request", [types.uint(10000), types.uint(shiftPriceValue(1)), types.uint(140), types.uint(10), types.uint(10)], deployer_2.address)
+      ]);
 
-        block.receipts[0].result.expectOk().expectBool(true);
-        const event = block.receipts[0].events[0];
+      block.receipts[0].result.expectOk().expectBool(true);
+      const event = block.receipts[0].events[0];
 
-        assertEquals(typeof event, 'object');
-        assertEquals(event.type, 'contract_event');
-        assertEquals(event.contract_event.topic, "print");
-        assertStringIncludes(event.contract_event.value, "btc-deposit: u100000000");
-        assertStringIncludes(event.contract_event.value, "strike-price: u14000");
-        assertStringIncludes(event.contract_event.value, "creator: " + contractPrincipal(deployer_2, callbackContract));
-        assertStringIncludes(event.contract_event.value, 'event-source: "dlclink:create-dlc:v2"');
-    },
+      assertEquals(typeof event, 'object');
+      assertEquals(event.type, 'contract_event');
+      assertEquals(event.contract_event.topic, "print");
+      assertStringIncludes(event.contract_event.value, "btc-deposit: u100000000");
+      assertStringIncludes(event.contract_event.value, "strike-price: u14000");
+      assertStringIncludes(event.contract_event.value, "creator: " + contractPrincipal(deployer_2, callbackContract));
+      assertStringIncludes(event.contract_event.value, 'event-source: "dlclink:create-dlc:v2"');
+  },
 });
 
 
 Clarinet.test({
-    name: "create-dlc-internal creates a new dlc, prints an event, calls the callback-function and mints an open-dlc nft",
-    async fn(chain: Chain, accounts: Map<string, Account>) {
-        const deployer = accounts.get('deployer')!;
-        const deployer_2 = accounts.get('deployer_2')!;
+  name: "create-dlc-internal creates a new dlc, prints an event, calls the callback-function and mints an open-dlc nft",
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+    const deployer = accounts.get('deployer')!;
+    const deployer_2 = accounts.get('deployer_2')!;
 
-        const { createDLCInternalPrintEvent, callbackPrintEvent, mintEvent } = createNewDLC(chain, deployer, contractPrincipal(deployer_2, callbackContract));
+    const { createDLCInternalPrintEvent, callbackPrintEvent, mintEvent } = createNewDLC(chain, deployer, contractPrincipal(deployer_2, callbackContract));
 
-        let block = chain.mineBlock([
-            Tx.contractCall(dlcManagerContract, "get-dlc", [types.buff(UUID)], deployer.address)
-        ]);
+    let block = chain.mineBlock([
+        Tx.contractCall(dlcManagerContract, "get-dlc", [types.buff(UUID)], deployer.address)
+    ]);
 
-        assertEquals(typeof createDLCInternalPrintEvent, 'object');
-        assertEquals(createDLCInternalPrintEvent.type, 'contract_event');
-        assertEquals(createDLCInternalPrintEvent.contract_event.topic, "print");
-        assertStringIncludes(createDLCInternalPrintEvent.contract_event.value, 'btc-deposit: u100000000, creator: STNHKEPYEPJ8ET55ZZ0M5A34J0R3N5FM2CMMMAZ6.callback-contract, emergency-refund-time: u10, event-source: "dlclink:create-dlc-internal:v2", liquidation-fee: u10, liquidation-ratio: u140, strike-price: u14000, uuid: 0x66616b6575756964, vault-loan-amount: u10000')
+    assertEquals(typeof createDLCInternalPrintEvent, 'object');
+    assertEquals(createDLCInternalPrintEvent.type, 'contract_event');
+    assertEquals(createDLCInternalPrintEvent.contract_event.topic, "print");
+    assertStringIncludes(createDLCInternalPrintEvent.contract_event.value, 'btc-deposit: u100000000, creator: STNHKEPYEPJ8ET55ZZ0M5A34J0R3N5FM2CMMMAZ6.callback-contract, emergency-refund-time: u10, event-source: "dlclink:create-dlc-internal:v2", liquidation-fee: u10, liquidation-ratio: u140, strike-price: u14000, uuid: 0x66616b6575756964, vault-loan-amount: u10000')
 
-        assertEquals(typeof callbackPrintEvent, 'object');
-        assertEquals(callbackPrintEvent.type, 'contract_event');
-        assertEquals(callbackPrintEvent.contract_event.topic, "print");
-        // TODO: how is this passing?
-        console.log(callbackPrintEvent.contract_event.value)
-        assertStringIncludes(callbackPrintEvent.contract_event.value, 'event-source: "callback-mock-post-create", nonce: u1, uuid: 0x66616b6575756964')
+    assertEquals(typeof callbackPrintEvent, 'object');
+    assertEquals(callbackPrintEvent.type, 'contract_event');
+    assertEquals(callbackPrintEvent.contract_event.topic, "print");
+    assertStringIncludes(callbackPrintEvent.contract_event.value, 'event-source: "callback-mock-post-create", nonce: u1, uuid: 0x66616b6575756964')
 
-        assertEquals(typeof mintEvent, 'object');
-        assertEquals(mintEvent.type, 'nft_mint_event');
-        assertEquals(mintEvent.nft_mint_event.asset_identifier.split("::")[1], nftAssetContract);
-        assertEquals(mintEvent.nft_mint_event.recipient.split(".")[1], dlcManagerContract);
+    assertEquals(typeof mintEvent, 'object');
+    assertEquals(mintEvent.type, 'nft_mint_event');
+    assertEquals(mintEvent.nft_mint_event.asset_identifier.split("::")[1], nftAssetContract);
+    assertEquals(mintEvent.nft_mint_event.recipient.split(".")[1], dlcManagerContract);
 
-        const dlc: any = block.receipts[0].result.expectSome().expectTuple();
+    const dlc: any = block.receipts[0].result.expectSome().expectTuple();
 
-        assertEquals(hex2ascii(dlc.uuid), "fakeuuid");
-        assertEquals(dlc["closing-price"], "none");
-        assertEquals(dlc.creator, "STNHKEPYEPJ8ET55ZZ0M5A34J0R3N5FM2CMMMAZ6.callback-contract");
-    },
+    assertEquals(hex2ascii(dlc.uuid), "fakeuuid");
+    assertEquals(dlc["closing-price"], "none");
+    assertEquals(dlc.creator, "STNHKEPYEPJ8ET55ZZ0M5A34J0R3N5FM2CMMMAZ6.callback-contract");
+  },
 });
 
 Clarinet.test({
-    name: "only contract owner can add DLC",
-    async fn(chain: Chain, accounts: Map<string, Account>) {
-        const deployer_2 = accounts.get('deployer_2')!;
-        const wallet_1 = accounts.get('wallet_1')!;
+  name: "only contract owner can add DLC",
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+      const deployer_2 = accounts.get('deployer_2')!;
+      const wallet_1 = accounts.get('wallet_1')!;
 
-        let block = chain.mineBlock([
-            Tx.contractCall(dlcManagerContract, "create-dlc-internal", [types.buff(UUID), types.uint(10000), types.uint(100000000), types.uint(140), types.uint(10), types.uint(14000), types.uint(10), types.principal(contractPrincipal(deployer_2, callbackContract)), types.principal(contractPrincipal(deployer_2, callbackContract)), types.uint(1)], wallet_1.address),
-        ]);
+      let block = chain.mineBlock([
+          Tx.contractCall(dlcManagerContract, "create-dlc-internal", [types.buff(UUID), types.uint(10000), types.uint(100000000), types.uint(140), types.uint(10), types.uint(14000), types.uint(10), types.principal(contractPrincipal(deployer_2, callbackContract)), types.principal(contractPrincipal(deployer_2, callbackContract)), types.uint(1)], wallet_1.address),
+      ]);
 
-        const err = block.receipts[0].result.expectErr();
-        assertEquals(err, "u2001"); // err-unauthorised
-    },
+      const err = block.receipts[0].result.expectErr();
+      assertEquals(err, "u2001"); // err-unauthorised
+  },
 });
 
 Clarinet.test({
@@ -172,7 +170,7 @@ Clarinet.test({
 })
 
 Clarinet.test({
-  name: "get-payout-curve-value returns the correct amount for given BTC price",
+  name: "get-payout-curve-value returns the correct amount for given BTC price (example values)",
   async fn(chain: Chain, accounts: Map<string, Account>) {
     const deployer = accounts.get('deployer')!;
     const deployer_2 = accounts.get('deployer_2')!;
@@ -190,6 +188,25 @@ Clarinet.test({
     block.receipts[0].result.expectOk().expectUint(7857142857);
     block.receipts[1].result.expectOk().expectUint(0);
     block.receipts[2].result.expectOk().expectUint(10000000000);
+ }
+})
+
+Clarinet.test({
+  name: "get-payout-curve-value returns the correct amount for given BTC price",
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+    const deployer = accounts.get('deployer')!;
+    const deployer_2 = accounts.get('deployer_2')!;
+
+    createNewDLC(chain, deployer, contractPrincipal(deployer_2, callbackContract), {vaultAmount: 15000, btcDeposit: 2, liquidationRatio: 140, liquidationFee: 10, strikePrice: 21000});
+
+    let block = chain.mineBlock([
+      Tx.contractCall(dlcManagerContract, "get-payout-curve-value", [types.buff(UUID), types.uint(shiftPriceValue(10400))], deployer.address),
+      Tx.contractCall(dlcManagerContract, "get-payout-curve-value", [types.buff(UUID), types.uint(shiftPriceValue(11000))], deployer.address),
+
+    ]);
+
+    block.receipts[0].result.expectOk().expectUint(7932692307);
+    block.receipts[1].result.expectOk().expectUint(0);
  }
 })
 
@@ -240,6 +257,25 @@ Clarinet.test({
 });
 
 Clarinet.test({
+  name: "close-dlc-liquidate-internal throws error if there is no need to liquidate",
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+    const deployer = accounts.get('deployer')!;
+    const deployer_2 = accounts.get('deployer_2')!;
+
+    createNewDLC(chain, deployer, contractPrincipal(deployer_2, callbackContract));
+    setTrustedOracle(chain, deployer.address);
+
+    let block = chain.mineBlock([
+        Tx.contractCall(dlcManagerContract, "close-dlc-liquidate-internal", [types.buff(UUID), packageCV.timestamp, packageCV.prices, signature, types.principal(contractPrincipal(deployer_2, callbackContract))], deployer.address)
+    ]);
+
+    const err = block.receipts[0].result.expectErr();
+    assertEquals(err, "u3000"); // err-does-not-need-liquidation
+
+  }
+})
+
+Clarinet.test({
     name: "close-dlc-liquidate-internal prints payout-curve-value, updates closing-price and actual-closing-time, calls the callback-contract and burns the corresponding nft",
     async fn(chain: Chain, accounts: Map<string, Account>) {
         const deployer = accounts.get('deployer')!;
@@ -280,100 +316,110 @@ Clarinet.test({
     },
 });
 
-// Clarinet.test({
-//     name: "can't close a dlc with wrong asset submitted",
-//     async fn(chain: Chain, accounts: Map<string, Account>) {
-//         const deployer = accounts.get('deployer')!;
-//         const deployer_2 = accounts.get('deployer_2')!;
-  
-//         createNewDLC(chain, deployer, contractPrincipal(deployer_2, callbackContract));
-//         setTrustedOracle(chain, deployer.address);
+Clarinet.test({
+  name: "can't request close on a closed dlc",
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+      const deployer = accounts.get('deployer')!;
+      const deployer_2 = accounts.get('deployer_2')!;
 
-//         let block = chain.mineBlock([
-//             Tx.contractCall(dlcManagerContract, "close-dlc-internal", [types.buff(UUID), wrongPackageCV.timestamp, wrongPackageCV.prices, wrongPackageSingature], deployer.address),
-//         ]);
+      createNewDLC(chain, deployer, contractPrincipal(deployer_2, callbackContract));
+      setTrustedOracle(chain, deployer.address);
 
-//         const err = block.receipts[0].result.expectErr();
-//         assertEquals(err, "u2008"); // err-not-the-same-assets
-//     },
-// });
+      let block = chain.mineBlock([
+          Tx.contractCall(dlcManagerContract, "close-dlc-internal", [types.buff(UUID), types.principal(contractPrincipal(deployer_2, callbackContract))], deployer.address),
+          Tx.contractCall(dlcManagerContract, "close-dlc", [types.buff(UUID)], deployer.address),
+      ]);
 
-// Clarinet.test({
-//     name: "can't request close on a closed dlc",
-//     async fn(chain: Chain, accounts: Map<string, Account>) {
-//         const deployer = accounts.get('deployer')!;
-//         const deployer_2 = accounts.get('deployer_2')!;
-  
-//         createNewDLC(chain, deployer, contractPrincipal(deployer_2, callbackContract));
-//         setTrustedOracle(chain, deployer.address);
-
-//         let block = chain.mineBlock([
-//             Tx.contractCall(dlcManagerContract, "close-dlc-internal", [types.buff(UUID), packageCV.timestamp, packageCV.prices, signature], deployer.address),
-//             Tx.contractCall(dlcManagerContract, "close-dlc", [types.buff(UUID)], deployer.address),
-//         ]);
-
-//         const err = block.receipts[1].result.expectErr();
-//         assertEquals(err, "u2005"); // err-already-closed
-//     },
-// });
-
-// Clarinet.test({
-//     name: "only authorized wallets can request close-dlc",
-//     async fn(chain: Chain, accounts: Map<string, Account>) {
-//         const deployer = accounts.get('deployer')!;
-//         const wallet_1 = accounts.get('wallet_1')!;
-//         const deployer_2 = accounts.get('deployer_2')!;
-  
-//         createNewDLC(chain, deployer, contractPrincipal(deployer_2, callbackContract));
-//         setTrustedOracle(chain, deployer.address);
-
-//         let block = chain.mineBlock([
-//             Tx.contractCall(dlcManagerContract, "close-dlc", [types.buff(UUID)], wallet_1.address),
-//         ]);
-
-//         const err = block.receipts[0].result.expectErr();
-//         assertEquals(err, "u2001"); // err-already-closed
-//     },
-// });
+      const err = block.receipts[1].result.expectErr();
+      assertEquals(err, "u2005"); // err-already-closed
+  },
+});
 
 
+Clarinet.test({
+  name: "can't request close-liquidate on a closed-liquidated dlc",
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+      const deployer = accounts.get('deployer')!;
+      const deployer_2 = accounts.get('deployer_2')!;
 
-// Clarinet.test({
-//     name: "get-dlc-closing-price-and-time throws u2007 of not closed",
-//     async fn(chain: Chain, accounts: Map<string, Account>) {
-//         const deployer = accounts.get('deployer')!;
-//         const wallet_1 = accounts.get('wallet_1')!;
-//         const deployer_2 = accounts.get('deployer_2')!;
-  
-//         createNewDLC(chain, deployer, contractPrincipal(deployer_2, callbackContract));
+      createNewDLC(chain, deployer, contractPrincipal(deployer_2, callbackContract));
+      setTrustedOracle(chain, deployer.address);
 
-//         let block = chain.mineBlock([
-//             Tx.contractCall(dlcManagerContract, "get-dlc-closing-price-and-time", [types.buff(UUID)], wallet_1.address),
-//         ]);
+      let block = chain.mineBlock([
+          Tx.contractCall(dlcManagerContract, "close-dlc-liquidate-internal", [types.buff(UUID), lowPackageCV.timestamp, lowPackageCV.prices, lowSignature, types.principal(contractPrincipal(deployer_2, callbackContract))], deployer.address),
+          Tx.contractCall(dlcManagerContract, "close-dlc-liquidate", [types.buff(UUID)], deployer.address),
+      ]);
 
-//         const err = block.receipts[0].result.expectErr();
-//         assertEquals(err, "u2007"); // err-already-closed
-//     },
-// });
+      const err = block.receipts[1].result.expectErr();
+      assertEquals(err, "u2005"); // err-already-closed
+  },
+});
 
-// Clarinet.test({
-//     name: "get-dlc-closing-price-and-time returns correct closing-price for closed DLC",
-//     async fn(chain: Chain, accounts: Map<string, Account>) {
-//         const deployer = accounts.get('deployer')!;
-//         const wallet_1 = accounts.get('wallet_1')!;
-//         const deployer_2 = accounts.get('deployer_2')!;
-  
-//         createNewDLC(chain, deployer, contractPrincipal(deployer_2, callbackContract));
+Clarinet.test({
+  name: "only authorized wallets can request close-dlc",
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+      const deployer = accounts.get('deployer')!;
+      const wallet_1 = accounts.get('wallet_1')!;
+      const deployer_2 = accounts.get('deployer_2')!;
 
-//         setTrustedOracle(chain, deployer.address);
+      createNewDLC(chain, deployer, contractPrincipal(deployer_2, callbackContract));
+      setTrustedOracle(chain, deployer.address);
 
-//         let block = chain.mineBlock([
-//             Tx.contractCall(dlcManagerContract, "close-dlc-internal", [types.buff(UUID), packageCV.timestamp, packageCV.prices, signature], deployer.address),
-//             Tx.contractCall(dlcManagerContract, "get-dlc-closing-price-and-time", [types.buff(UUID)], wallet_1.address),
-//         ]);
+      let block = chain.mineBlock([
+          Tx.contractCall(dlcManagerContract, "close-dlc", [types.buff(UUID)], wallet_1.address),
+      ]);
 
-//         const partialDLC: any = block.receipts[1].result.expectOk().expectTuple();
-//         assertEquals(partialDLC["closing-price"], "(some u250000000)");
-//         assertEquals(partialDLC["closing-time"], "u10")
-//     },
-// });
+      const err = block.receipts[0].result.expectErr();
+      assertEquals(err, "u2001"); // err-unauthorized
+  },
+});
+
+
+Clarinet.test({
+  name: "only contract-owner can register contracts",
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+      const deployer = accounts.get('deployer')!;
+      const deployer_2 = accounts.get('deployer_2')!;
+
+      let block = chain.mineBlock([
+          Tx.contractCall(dlcManagerContract, "register-contract", [types.principal(contractPrincipal(deployer_2, callbackContract))], deployer_2.address),
+      ]);
+
+      const err = block.receipts[0].result.expectErr();
+      assertEquals(err, "u100"); // err-not-contract-owner
+  },
+});
+
+Clarinet.test({
+  name: "is-contract-registered returns true for registered contract",
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+      const deployer = accounts.get('deployer')!;
+      const deployer_2 = accounts.get('deployer_2')!;
+
+      let block = chain.mineBlock([
+          Tx.contractCall(dlcManagerContract, "register-contract", [types.principal(contractPrincipal(deployer_2, callbackContract))], deployer.address),
+          Tx.contractCall(dlcManagerContract, "is-contract-registered", [types.principal(contractPrincipal(deployer_2, callbackContract))], deployer_2.address)
+      ]);
+
+      block.receipts[0].result.expectOk().expectBool(true);
+      block.receipts[1].result.expectBool(true);
+  },
+});
+
+Clarinet.test({
+  name: "is-contract-registered returns false for unregistered contract",
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+      const deployer = accounts.get('deployer')!;
+      const deployer_2 = accounts.get('deployer_2')!;
+
+      let block = chain.mineBlock([
+          Tx.contractCall(dlcManagerContract, "register-contract", [types.principal(contractPrincipal(deployer_2, callbackContract))], deployer.address),
+          Tx.contractCall(dlcManagerContract, "unregister-contract", [types.principal(contractPrincipal(deployer_2, callbackContract))], deployer.address),
+          Tx.contractCall(dlcManagerContract, "is-contract-registered", [types.principal(contractPrincipal(deployer_2, callbackContract))], deployer_2.address)
+      ]);
+
+      block.receipts[0].result.expectOk().expectBool(true);
+      block.receipts[1].result.expectOk().expectBool(true);
+      block.receipts[2].result.expectBool(false);
+  },
+});
