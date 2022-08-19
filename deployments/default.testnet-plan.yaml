@@ -8,15 +8,28 @@ plan:
   batches:
     - id: 0
       transactions:
+        - requirement-publish:
+            contract-id: STDBEG5X8XD50SPM1JJH0E5CTXGDV5NJTJTTH7YB.redstone-verify
+            remap-sender: ST12S2DB1PKRM1BJ1G5BQS0AB0QPKHRVHWXDBJ27R
+            remap-principals:
+              STDBEG5X8XD50SPM1JJH0E5CTXGDV5NJTJTTH7YB: ST12S2DB1PKRM1BJ1G5BQS0AB0QPKHRVHWXDBJ27R
+            cost: 46150
+            path: ".requirements/STDBEG5X8XD50SPM1JJH0E5CTXGDV5NJTJTTH7YB.redstone-verify.clar"
         - contract-publish:
             contract-name: dlc-link-callback-trait
             expected-sender: ST12S2DB1PKRM1BJ1G5BQS0AB0QPKHRVHWXDBJ27R
-            cost: 1250
+            cost: 2400
             path: contracts/dlc-link-callback-trait.clar
             anchor-block-only: true
         - contract-publish:
-            contract-name: dlc-manager-pricefeed-v1-02
+            contract-name: dlc-manager-pricefeed-v2-01
             expected-sender: ST12S2DB1PKRM1BJ1G5BQS0AB0QPKHRVHWXDBJ27R
-            cost: 83790
+            cost: 110090
             path: contracts/dlc-manager-pricefeed.clar
+            anchor-block-only: true
+        - contract-publish:
+            contract-name: sample-protocol-contract
+            expected-sender: ST12S2DB1PKRM1BJ1G5BQS0AB0QPKHRVHWXDBJ27R
+            cost: 46280
+            path: example/sample-protocol-contract.clar
             anchor-block-only: true
