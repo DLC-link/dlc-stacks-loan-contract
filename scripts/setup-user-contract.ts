@@ -24,9 +24,10 @@ const txOptions = {
   contractName: exampleContractName,
   functionName: functionName,
   functionArgs: [
-    bufferCVFromString(assetName), // asset
-    uintCV(strikePrice),
-    uintCV(unixTimeStamp), // closing-time
+    uintCV(10000),
+    uintCV(100000000),
+    uintCV(140),
+    uintCV(10),
     uintCV(unixTimeStamp), // emergency-refund-time
   ],
   senderKey: protocolPrivateKey,

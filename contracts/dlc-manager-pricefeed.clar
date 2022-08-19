@@ -11,6 +11,8 @@
 (define-constant err-not-closed (err u2007))
 (define-constant err-not-the-same-assets (err u2008))
 (define-constant err-does-not-need-liquidation (err u3000))
+(define-constant err-no-price-data (err u3001))
+(define-constant err-cant-unwrap (err u3002))
 
 (define-constant value-shift u100000000)
 (define-constant value-shift-squared u10000000000000000)
@@ -32,7 +34,6 @@
 
 ;; NFT to keep track of registered contracts
 (define-non-fungible-token registered-contract principal)
-
 
 (define-map dlcs
   (buff 8)
@@ -124,8 +125,10 @@
     (asserts! (or (is-eq contract-owner tx-sender) (is-eq (get creator dlc) tx-sender)) err-unauthorised)
     (asserts! (is-none (get closing-price dlc)) err-already-closed)
     (print { 
-      uuid: uuid, 
+      uuid: uuid,
+      ;; TODO: what sort of data shall we hand back here?
       vault-loan-amount: (get vault-loan-amount dlc),
+      caller: tx-sender,
       event-source: "dlclink:close-dlc:v2"
       })
     (ok true)
@@ -139,40 +142,55 @@
     ;; (asserts! (or (is-eq contract-owner tx-sender) (is-eq (get creator dlc) tx-sender)) err-unauthorised)
     (asserts! (is-none (get closing-price dlc)) err-already-closed)
     (print { 
-      uuid: uuid, 
+      uuid: uuid,
+      ;; TODO: what sort of data shall we hand back here?
       vault-loan-amount: (get vault-loan-amount dlc),
       liquidation-ratio: (get liquidation-ratio dlc),
       caller: tx-sender,
-      event-source: "dlclink:early-close-dlc:v2" 
+      event-source: "dlclink:close-dlc-liquidate:v2" 
       })
     (ok true)
   ))
 
+(define-public (close-dlc-internal (uuid (buff 8)) (timestamp uint) (callback-contract <cb-trait>)) 
+(let (
+    (dlc (unwrap! (get-dlc uuid) err-unknown-dlc))
+    )
+    ;; TODO: closing-price and actual-closing-time is basically irrelevant here, if we move closing-status to something else
+    (asserts! (is-none (get closing-price dlc)) err-already-closed)
+    (map-set dlcs uuid (merge dlc { closing-price: (some u0), actual-closing-time: (/ timestamp u1000) }))
+    (print {
+      uuid: uuid,
+      actual-closing-time: (/ timestamp u1000),
+      event-source: "dlclink:close-dlc-internal:v2" })
+    (try! (contract-call? callback-contract post-close-dlc-handler uuid u0))
+    (nft-burn? open-dlc uuid dlc-manager-contract)))
+
 ;;Close the dlc with the oracle data. This is called by the DLC Oracle service
-;; TODO: call back to the closecallback
-;; TODO: check if liquidation should happen
-(define-public (close-dlc-internal (uuid (buff 8)) (timestamp uint) (entries (list 10 {symbol: (buff 32), value: uint})) (signature (buff 65)))
+(define-public (close-dlc-liquidate-internal (uuid (buff 8)) (timestamp uint) (entries (list 10 {symbol: (buff 32), value: uint})) (signature (buff 65)) (callback-contract <cb-trait>))
   (let (
     ;; Recover the pubkey of the signer.
     (signer (try! (contract-call? 'STDBEG5X8XD50SPM1JJH0E5CTXGDV5NJTJTTH7YB.redstone-verify recover-signer timestamp entries signature)))
     (dlc (unwrap! (get-dlc uuid) err-unknown-dlc))
     (block-timestamp (get-last-block-timestamp))
+    (price (unwrap! (get value (element-at entries u0)) err-no-price-data))
     )
     (asserts! (is-eq contract-owner tx-sender) err-unauthorised)
+    ;; Check if the vault needs to be liquidated
+    (asserts! (unwrap! (check-liquidation uuid price) err-cant-unwrap) err-does-not-need-liquidation)
     ;; Check if the signer is a trusted oracle.
     (asserts! (is-trusted-oracle signer) err-untrusted-oracle)
     ;; Check if the data is not stale, depending on how the app is designed.
     (asserts! (> timestamp block-timestamp) err-stale-data) ;; timestamp should be larger than the last block timestamp.
-    ;;DLC related checks
-    ;; (asserts! (is-eq (unwrap-panic (get symbol (element-at entries u0))) (get asset dlc)) err-not-the-same-assets) ;;check if the submitted asset is the same what was logged in the DLC
     (asserts! (is-none (get closing-price dlc)) err-already-closed)
     (map-set dlcs uuid (merge dlc { closing-price: (get value (element-at entries u0)), actual-closing-time: (/ timestamp u1000) })) ;;timestamp is in milliseconds so we have to convert it to seconds to keep the timestamps consistent
     (print {
       uuid: uuid,
-      closing-price: (get value (element-at entries u0)),
-      ;; TODO: print payout-ratio
+      payout-curve-value: (get-payout-curve-value uuid price),
+      closing-price: price,
       actual-closing-time: (/ timestamp u1000),
-      event-source: "dlclink:close-dlc-internal:v2" })
+      event-source: "dlclink:close-dlc-liquidate-internal:v2" })
+    (try! (contract-call? callback-contract post-close-dlc-handler uuid price))
     (nft-burn? open-dlc uuid dlc-manager-contract))) ;;burn the open-dlc nft related to the UUID
 
 ;;Checks if a given DLC needs liquidation at the given btc-price (shifted by 10**8)
@@ -185,56 +203,24 @@
   )
 )
 
-;; TODO: return back to read-only
 ;; Return the resulting payout-curve-value at the given btc-price (shifted by 10**8)
 ;; using uints, this means return values between 0-10000000000
-(define-public (get-payout-curve-value (uuid (buff 8)) (btc-price uint))
+(define-read-only (get-payout-curve-value (uuid (buff 8)) (btc-price uint))
   (let (
     (dlc (unwrap! (get-dlc uuid) err-unknown-dlc))
     (collateral-value (get-collateral-value (get btc-deposit dlc) btc-price))
     (sell-to-liquidators-ratio (/ (shift-value (shift-value (get vault-loan-amount dlc))) collateral-value))
-
-    ;; (to-protocol (* sell-to-liquidators-ratio (unshift-value (get btc-deposit dlc))))
-    ;; (total-to-protocol (+ to-protocol (* (/ to-protocol u100) (get liquidation-fee dlc))))
-    ;; (to-user (- (unshift-value (get btc-deposit dlc)) total-to-protocol))
-    
     (payout-curve-value (* sell-to-liquidators-ratio (+ u100 (get liquidation-fee dlc))))
     (payout-curve-unshifted (unshift-value payout-curve-value))
-    
     )
     (begin 
-      (print {
-        collateral-value: collateral-value,
-        sell-to-liquidators-ratio: sell-to-liquidators-ratio,
-        ;; to-protocol: to-protocol,
-        ;; total-to-protocol: total-to-protocol,
-        ;; to-user: to-user,
-        payout-curve-unshifted: payout-curve-unshifted })
-
-      (if (<= collateral-value (get strike-price dlc))
+      (if (unwrap! (check-liquidation uuid btc-price) err-cant-unwrap)
           (if (>= payout-curve-unshifted (shift-value u100)) 
             (ok (shift-value u100)) 
             (ok payout-curve-unshifted))
         (ok u0)
       )  
     )
-  )
-)
-
-;; FOR TESTING, TODO: REMOVE BEFORE PRODUCTION
-(define-public (add-dlc (uuid (buff 8)) (vault-loan-amount uint) (btc-deposit uint) (liquidation-ratio uint) (liquidation-fee uint) (strike-price uint) (emergency-refund-time uint)) 
-  (begin (map-set dlcs uuid {
-      uuid: uuid, 
-      vault-loan-amount: vault-loan-amount,
-      liquidation-ratio: liquidation-ratio,
-      liquidation-fee: liquidation-fee,
-      strike-price: strike-price,
-      btc-deposit: btc-deposit,
-      closing-price: none, 
-      actual-closing-time: u0, 
-      emergency-refund-time: u0,
-      creator: tx-sender }) 
-    (ok true)
   )
 )
 
