@@ -15,6 +15,7 @@
 (define-constant err-contract-call-failed (err u1001))
 (define-constant err-unauthorised (err u2001))
 (define-constant err-unknown-user-contract (err u2003))
+(define-constant err-doesnt-need-liquidation (err u2004))
 
 ;; Contract owner
 (define-constant contract-owner tx-sender)
@@ -114,6 +115,27 @@
     (asserts! (is-eq contract-owner tx-sender)  err-unauthorised)
     (begin
       (unwrap! (ok (as-contract (contract-call? .dlc-manager-pricefeed-v2-01 close-dlc uuid))) err-contract-call-failed)
+    )
+  )
+)
+
+(define-public (close-dlc-liquidate (user-id uint) (btc-price uint)) 
+  (let (
+    (usercontract (unwrap! (get-usercontract user-id) err-unknown-user-contract))
+    (uuid (unwrap! (get dlc_uuid usercontract) err-cant-unwrap))
+    ) 
+    (asserts! (is-eq contract-owner tx-sender) err-unauthorised)
+    (asserts! (unwrap! (check-liquidation uuid btc-price) err-cant-unwrap) err-doesnt-need-liquidation)
+    (begin
+      (unwrap! (ok (as-contract (contract-call? .dlc-manager-pricefeed-v2-01 close-dlc-liquidate uuid))) err-contract-call-failed)
+    )
+  )
+)
+
+(define-private (check-liquidation (uuid (buff 8)) (btc-price uint))
+  (let (
+    ) 
+    (begin (unwrap! (ok (as-contract (contract-call? .dlc-manager-pricefeed-v2-01 check-liquidation uuid btc-price))) err-contract-call-failed)
     )
   )
 )

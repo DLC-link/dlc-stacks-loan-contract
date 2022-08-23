@@ -14,8 +14,9 @@
 (define-constant err-no-price-data (err u3001))
 (define-constant err-cant-unwrap (err u3002))
 
-(define-constant value-shift u100000000)
-(define-constant value-shift-squared u10000000000000000)
+(define-constant value-shift-2 u100)
+(define-constant value-shift-8 u100000000)
+(define-constant value-shift-16 u10000000000000000)
 
 ;; status enums
 (define-constant status-open u0)
@@ -61,23 +62,23 @@
 (define-read-only (get-dlc (uuid (buff 8)))
   (map-get? dlcs uuid))
 
-(define-private (shift-value (value uint))
-  (* value value-shift))
+(define-private (shift-value (value uint) (shift uint))
+  (* value shift))
 
-(define-private (unshift-value (value uint))
-  (/ value value-shift))
+(define-private (unshift-value (value uint) (shift uint))
+  (/ value shift))
 
 ;;emits an event - see README for more details
-;;vault-loan-amount : the borrowed USDA amount in the vault
+;;vault-loan-amount : the borrowed USDA amount in the vault, in pennies (e.g. 10000 USD : 1000000)
 ;;btc-deposit : the deposited BTC amount, in Sats (shifted by 10**8)
-;;liquidation-ratio: e.g. 140
-;;liquidation-fee : e.g. 10
+;;liquidation-ratio percentage with two decimal precision: e.g. 140% : 14000
+;;liquidation-fee : same as ratio, e.g. 10% : 1000
 ;;emergency-refund-time: the time at which the DLC will be available for refund
 ;;callback-contract: the contract-principal where the create-dlc-internal will call back to
 ;;nonce provided for the dlc by the sample-protocol-contract to connect it to the resulting uuid
 (define-public (create-dlc (vault-loan-amount uint) (btc-deposit uint) (liquidation-ratio uint) (liquidation-fee uint) (emergency-refund-time uint) (callback-contract principal) (nonce uint))
   (let (
-    (strike-price (/ (* vault-loan-amount liquidation-ratio) u100))
+    (strike-price (/ (* vault-loan-amount liquidation-ratio) u10000))
     ) 
     (begin
       (asserts! (is-eq callback-contract tx-sender) err-unauthorised)
@@ -138,6 +139,7 @@
     (asserts! (is-eq (get status dlc) status-open) err-already-closed)
     (print { 
       uuid: uuid,
+      creator: (get creator dlc),
       caller: tx-sender,
       event-source: "dlclink:close-dlc:v2"
       })
@@ -152,6 +154,7 @@
     (asserts! (is-eq (get status dlc) status-open) err-already-closed)
     (print { 
       uuid: uuid,
+      creator: (get creator dlc),
       caller: tx-sender,
       event-source: "dlclink:close-dlc-liquidate:v2" 
       })
@@ -162,14 +165,16 @@
 (define-public (close-dlc-internal (uuid (buff 8)) (callback-contract <cb-trait>)) 
 (let (
     (dlc (unwrap! (get-dlc uuid) err-unknown-dlc))
+    (closing-price u0)
     )
     (asserts! (is-eq contract-owner tx-sender) err-unauthorised)
     (asserts! (is-eq (get status dlc) status-open) err-already-closed)
     (map-set dlcs uuid (merge dlc { status: status-closed }))
     (print {
       uuid: uuid,
+      closing-price: closing-price,
       event-source: "dlclink:close-dlc-internal:v2" })
-    (try! (contract-call? callback-contract post-close-dlc-handler uuid u0))
+    (try! (contract-call? callback-contract post-close-dlc-handler uuid closing-price))
     (nft-burn? open-dlc uuid dlc-manager-contract)))
 
 ;;Close the dlc with the oracle data. This is called by the DLC Oracle service
@@ -215,14 +220,14 @@
   (let (
     (dlc (unwrap! (get-dlc uuid) err-unknown-dlc))
     (collateral-value (get-collateral-value (get btc-deposit dlc) btc-price))
-    (sell-to-liquidators-ratio (/ (shift-value (shift-value (get vault-loan-amount dlc))) collateral-value))
+    (sell-to-liquidators-ratio (/ (shift-value (get vault-loan-amount dlc) value-shift-16) collateral-value))
     (payout-curve-value (* sell-to-liquidators-ratio (+ u100 (get liquidation-fee dlc))))
-    (payout-curve-unshifted (unshift-value payout-curve-value))
+    (payout-curve-unshifted (unshift-value payout-curve-value value-shift-8))
     )
     (begin 
       (if (unwrap! (check-liquidation uuid btc-price) err-cant-unwrap)
-          (if (>= payout-curve-unshifted (shift-value u100)) 
-            (ok (shift-value u100)) 
+          (if (>= payout-curve-unshifted (shift-value u1000 value-shift-8)) 
+            (ok (shift-value u1000 value-shift-8)) 
             (ok payout-curve-unshifted))
         (ok u0)
       )  
@@ -231,7 +236,7 @@
 )
 
 (define-private (get-collateral-value (btc-deposit uint) (btc-price uint))
-  (/ (* btc-deposit btc-price) value-shift-squared)
+  (shift-value (unshift-value (* btc-deposit btc-price) value-shift-16) value-shift-2)
 )
 
 (define-read-only (is-trusted-oracle (pubkey (buff 33)))

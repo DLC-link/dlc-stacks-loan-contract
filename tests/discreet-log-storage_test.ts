@@ -51,7 +51,7 @@ function setTrustedOracle(chain: Chain, senderAddress: string): Block {
   ]);
 }
 
-function createNewDLC(chain: Chain, deployer: Account, callbackContract: string, loanParams: {vaultAmount: number, btcDeposit: number, liquidationRatio: number, liquidationFee: number, strikePrice: number} = {vaultAmount: 10000, btcDeposit: 1, liquidationRatio: 140, liquidationFee: 10, strikePrice: 14000 }) {
+function createNewDLC(chain: Chain, deployer: Account, callbackContract: string, loanParams: {vaultAmount: number, btcDeposit: number, liquidationRatio: number, liquidationFee: number, strikePrice: number} = {vaultAmount: 1000000, btcDeposit: 1, liquidationRatio: 14000, liquidationFee: 1000, strikePrice: 1400000 }) {
 
   const block = chain.mineBlock([
     Tx.contractCall(dlcManagerContract, "create-dlc-internal", [types.buff(UUID), types.uint(loanParams.vaultAmount), types.uint(shiftPriceValue(loanParams.btcDeposit)), types.uint(loanParams.liquidationRatio), types.uint(loanParams.liquidationFee), types.uint(loanParams.strikePrice), types.uint(10), types.principal(callbackContract), types.principal(callbackContract), types.uint(1)], deployer.address)
@@ -84,7 +84,7 @@ Clarinet.test({
       const deployer_2 = accounts.get('deployer_2')!;
 
       let block = chain.mineBlock([
-          Tx.contractCall(contractPrincipal(deployer_2, callbackContract), "create-dlc-request", [types.uint(10000), types.uint(shiftPriceValue(1)), types.uint(140), types.uint(10), types.uint(10)], deployer_2.address)
+          Tx.contractCall(contractPrincipal(deployer_2, callbackContract), "create-dlc-request", [types.uint(1000000), types.uint(shiftPriceValue(1)), types.uint(14000), types.uint(1000), types.uint(10)], deployer_2.address)
       ]);
 
       block.receipts[0].result.expectOk().expectBool(true);
@@ -94,7 +94,7 @@ Clarinet.test({
       assertEquals(event.type, 'contract_event');
       assertEquals(event.contract_event.topic, "print");
       assertStringIncludes(event.contract_event.value, "btc-deposit: u100000000");
-      assertStringIncludes(event.contract_event.value, "strike-price: u14000");
+      assertStringIncludes(event.contract_event.value, "strike-price: u1400000");
       assertStringIncludes(event.contract_event.value, "creator: " + contractPrincipal(deployer_2, callbackContract));
       assertStringIncludes(event.contract_event.value, 'event-source: "dlclink:create-dlc:v2"');
   },
@@ -116,7 +116,7 @@ Clarinet.test({
     assertEquals(typeof createDLCInternalPrintEvent, 'object');
     assertEquals(createDLCInternalPrintEvent.type, 'contract_event');
     assertEquals(createDLCInternalPrintEvent.contract_event.topic, "print");
-    assertStringIncludes(createDLCInternalPrintEvent.contract_event.value, 'btc-deposit: u100000000, creator: STNHKEPYEPJ8ET55ZZ0M5A34J0R3N5FM2CMMMAZ6.callback-contract, emergency-refund-time: u10, event-source: "dlclink:create-dlc-internal:v2", liquidation-fee: u10, liquidation-ratio: u140, strike-price: u14000, uuid: 0x66616b6575756964, vault-loan-amount: u10000')
+    assertStringIncludes(createDLCInternalPrintEvent.contract_event.value, 'btc-deposit: u100000000, creator: STNHKEPYEPJ8ET55ZZ0M5A34J0R3N5FM2CMMMAZ6.callback-contract, emergency-refund-time: u10, event-source: "dlclink:create-dlc-internal:v2", liquidation-fee: u1000, liquidation-ratio: u14000, strike-price: u1400000, uuid: 0x66616b6575756964, vault-loan-amount: u1000000')
 
     assertEquals(typeof callbackPrintEvent, 'object');
     assertEquals(callbackPrintEvent.type, 'contract_event');
@@ -185,9 +185,9 @@ Clarinet.test({
       Tx.contractCall(dlcManagerContract, "get-payout-curve-value", [types.buff(UUID), types.uint(shiftPriceValue(9000))], deployer.address),
     ]);
 
-    block.receipts[0].result.expectOk().expectUint(7857142857);
+    block.receipts[0].result.expectOk().expectUint(78571428571);
     block.receipts[1].result.expectOk().expectUint(0);
-    block.receipts[2].result.expectOk().expectUint(10000000000);
+    block.receipts[2].result.expectOk().expectUint(100000000000);
  }
 })
 
@@ -197,7 +197,7 @@ Clarinet.test({
     const deployer = accounts.get('deployer')!;
     const deployer_2 = accounts.get('deployer_2')!;
 
-    createNewDLC(chain, deployer, contractPrincipal(deployer_2, callbackContract), {vaultAmount: 15000, btcDeposit: 2, liquidationRatio: 140, liquidationFee: 10, strikePrice: 21000});
+    createNewDLC(chain, deployer, contractPrincipal(deployer_2, callbackContract), {vaultAmount: 1500000, btcDeposit: 2, liquidationRatio: 14000, liquidationFee: 1000, strikePrice: 2100000});
 
     let block = chain.mineBlock([
       Tx.contractCall(dlcManagerContract, "get-payout-curve-value", [types.buff(UUID), types.uint(shiftPriceValue(10400))], deployer.address),
@@ -205,7 +205,7 @@ Clarinet.test({
 
     ]);
 
-    block.receipts[0].result.expectOk().expectUint(7932692307);
+    block.receipts[0].result.expectOk().expectUint(79326923076);
     block.receipts[1].result.expectOk().expectUint(0);
  }
 })
@@ -295,7 +295,7 @@ Clarinet.test({
         assertEquals(typeof printEvent2, 'object');
         assertEquals(printEvent2.type, 'contract_event');
         assertEquals(printEvent2.contract_event.topic, "print");
-        assertStringIncludes(printEvent2.contract_event.value, 'actual-closing-time: u1647332, closing-price: u1358866993200, event-source: "dlclink:close-dlc-liquidate-internal:v2", payout-curve-value: (ok u8095378274), uuid: 0x66616b6575756964')
+        assertStringIncludes(printEvent2.contract_event.value, 'actual-closing-time: u1647332, closing-price: u1358866993200, event-source: "dlclink:close-dlc-liquidate-internal:v2", payout-curve-value: (ok u80953782749), uuid: 0x66616b6575756964')
 
         const contractEvent = block.receipts[0].events[1];
 
