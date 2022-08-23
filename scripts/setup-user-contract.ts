@@ -24,10 +24,10 @@ const txOptions = {
   contractName: exampleContractName,
   functionName: functionName,
   functionArgs: [
-    uintCV(10000),
+    uintCV(1000000),
     uintCV(100000000),
-    uintCV(140),
-    uintCV(10),
+    uintCV(14000),
+    uintCV(1000),
     uintCV(unixTimeStamp), // emergency-refund-time
   ],
   senderKey: protocolPrivateKey,

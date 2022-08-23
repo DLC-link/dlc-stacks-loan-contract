@@ -1,7 +1,7 @@
 import { network, protocolPrivateKey, exampleContractName, exampleContractAddress } from './common'
 import { makeContractCall, broadcastTransaction, uintCV } from "@stacks/transactions";
 
-const functionName = "close-dlc";
+const functionName = "close-dlc-liquidate";
 
 function populateTxOptions() {
   return {
@@ -9,7 +9,8 @@ function populateTxOptions() {
     contractName: exampleContractName,
     functionName: functionName,
     functionArgs: [
-      uintCV(1)
+      uintCV(1),
+      uintCV(1400000000000) // btc-price (shifted)
     ],
     senderKey: protocolPrivateKey,
     validateWithAbi: true,

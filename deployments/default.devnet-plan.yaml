@@ -24,12 +24,12 @@ plan:
         - contract-publish:
             contract-name: dlc-manager-pricefeed-v2-01
             expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            cost: 109560
+            cost: 112950
             path: contracts/dlc-manager-pricefeed.clar
             anchor-block-only: true
         - contract-publish:
             contract-name: sample-protocol-contract
             expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            cost: 46280
+            cost: 55290
             path: example/sample-protocol-contract.clar
             anchor-block-only: true
