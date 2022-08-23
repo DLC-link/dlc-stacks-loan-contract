@@ -78,7 +78,6 @@
 ;;nonce provided for the dlc by the sample-protocol-contract to connect it to the resulting uuid
 (define-public (create-dlc (vault-loan-amount uint) (btc-deposit uint) (liquidation-ratio uint) (liquidation-fee uint) (emergency-refund-time uint) (callback-contract principal) (nonce uint))
   (let (
-    (strike-price (/ (* vault-loan-amount liquidation-ratio) u10000))
     ) 
     (begin
       (asserts! (is-eq callback-contract tx-sender) err-unauthorised)
@@ -87,7 +86,6 @@
         btc-deposit: btc-deposit,
         liquidation-ratio: liquidation-ratio,
         liquidation-fee: liquidation-fee,
-        strike-price: strike-price,
         emergency-refund-time: emergency-refund-time,
         creator: tx-sender,
         callback-contract: callback-contract,
@@ -100,7 +98,10 @@
 )
 
 ;;opens a new dlc - called by the DLC Oracle system
-(define-public (create-dlc-internal (uuid (buff 8)) (vault-loan-amount uint) (btc-deposit uint) (liquidation-ratio uint) (liquidation-fee uint) (strike-price uint) (emergency-refund-time uint) (creator principal) (callback-contract <cb-trait>) (nonce uint))
+(define-public (create-dlc-internal (uuid (buff 8)) (vault-loan-amount uint) (btc-deposit uint) (liquidation-ratio uint) (liquidation-fee uint) (emergency-refund-time uint) (creator principal) (callback-contract <cb-trait>) (nonce uint))
+  (let (
+    (strike-price (/ (* vault-loan-amount liquidation-ratio) u10000)) 
+  )
   (begin
     (asserts! (is-eq contract-owner tx-sender) err-unauthorised)
     (asserts! (is-none (map-get? dlcs uuid)) err-dlc-already-added)
@@ -129,6 +130,7 @@
     })
     (try! (contract-call? callback-contract post-create-dlc-handler nonce uuid))
     (nft-mint? open-dlc uuid dlc-manager-contract))) ;;mint an open-dlc nft to keep track of open dlcs
+  )
 
 ;; Regular, repaid loan closing request
 (define-public (close-dlc (uuid (buff 8)))
