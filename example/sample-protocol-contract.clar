@@ -100,6 +100,7 @@
             user-id: user-id,
             active: true
         }))
+        (map-set uuid-user-id uuid user-id)
         (ok true)
     )
 )
