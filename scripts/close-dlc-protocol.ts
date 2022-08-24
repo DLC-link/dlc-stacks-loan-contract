@@ -9,7 +9,7 @@ function populateTxOptions() {
     contractName: exampleContractName,
     functionName: functionName,
     functionArgs: [
-      uintCV(1)
+      uintCV(process.argv.slice(2)[0] || 1)
     ],
     senderKey: protocolPrivateKey,
     validateWithAbi: true,

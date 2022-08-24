@@ -13,8 +13,8 @@ const txOptions = {
   contractName: contractName,
   functionName: functionName,
   functionArgs: [
-    bufferCVFromString('rwiJuiUS'), // uuid
-    uintCV(1400000000000) // btc-price (shifted)
+    bufferCVFromString(process.argv.slice(2)[0] || 'nIycn4U2'), // uuid
+    uintCV(2147000000000) // btc-price (shifted)
   ],
   senderAddress: contractAddress,
   network,

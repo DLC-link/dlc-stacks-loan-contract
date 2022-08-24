@@ -9,8 +9,8 @@ function populateTxOptions() {
     contractName: exampleContractName,
     functionName: functionName,
     functionArgs: [
-      uintCV(1),
-      uintCV(1400000000000) // btc-price (shifted)
+      uintCV(process.argv.slice(2)[0] || 1),
+      uintCV(2100000000000) // btc-price (shifted)
     ],
     senderKey: protocolPrivateKey,
     validateWithAbi: true,
