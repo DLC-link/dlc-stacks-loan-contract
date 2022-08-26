@@ -34,7 +34,7 @@ Params
 uuid:string - UUID of the DLC
 closing-price:uint - the price at which the contract was closed at, with pennies precision
 
-## Function to call
+## Functions to call
 ### Register contract
 
 This must be run first by a DLC.Link admin. This authorizes your contract to interact with our DLC Manager contract and to be listened to by our listeners. This happens once, and should happen first before anything else.
@@ -116,7 +116,7 @@ MNEMONIC=[MNEMONIC]
 
 ## redstone-verify.clar
 
-The Redstone data-package verification contract is included in the `contracts/external/` folder for the purposes of deploying it during Mocknet testing. In production and testnet, the on-chain contracts are used, which can be found here: 
+The Redstone data-package verification contract is included in the `.requirements/` folder for the purposes of deploying it during Mocknet testing. In production and testnet, the on-chain contracts are used, which can be found here: 
 
 [redstone-verify on Testnet](https://explorer.stacks.co/txid/0x35952be366691c79243cc0fc43cfcf90ae71ed66a9b6d9578b167c28965bbf7e?chain=testnet)
 
@@ -127,12 +127,9 @@ The Redstone data-package verification contract is included in the `contracts/ex
 Fully testing the contract requires running instances of the DLC oracles and the backend service, which is not yet open-sourced. However, steps of a deployment to a local integration mocknet is still provided here for posterity:
 
 1. Update `.env` with the proper information (NODE_ENV=mocknet for mocknet setup)
-2. In `Clarinet.toml`: comment out the `project.requirements` lines (4-5)
-3. In `Clarinet.toml`: uncomment the 3 lines about the dev contracts (14-28)
-4. In the `dlc-manager-pricefeed.clar` file, update the redstone-verify contract's principal address to the mocknet deployer's: `ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM`
-5. If you changed anything else in the contract, regenerate the deployment plan:
+2. If you changed anything else in the contract, regenerate the deployment plan:
    1. `$ clarinet deployments generate --devnet`
-6. Launch the integration blockchain (docker must be running):
+3. Launch the integration blockchain (docker must be running):
    1. `$ clarinet integrate`
 
 
@@ -171,6 +168,8 @@ Under scripts folder there are predefined scripts to:
 - get all open dlc
 - event-listening
 - set oracle
+- check-liquidation
+- and more...
 
 These can be used as an example for later reference.
 
@@ -242,6 +241,9 @@ already-closed               u2005
 already-passed-closing-time  u2006
 not-closed                   u2007
 err-not-the-same-assets      u2008
+does-not-need-liquidation    u3000
+no-price-data                u3001
+cant-unwrap                  u3002
 ```
 
 ## Example calls
@@ -265,7 +267,9 @@ Flow of the Redstone oracle requests:
 
 # Notes
 
-closing-price comming from the oracle is not scaled eg.: BTC price: 3036091214130 needs to be divided by 10 \*\* 8 on the client side
+closing-price comming from the oracle is not scaled eg.: BTC price: 3036091214130 needs to be divided by 10 \*\* 8 on the client side.
+
+Similarly, all number values are unsigned integers, so utility functions are implemented for shifting/unshifting them to get the desired precision in the correct places.
 
 # Scripts
 
