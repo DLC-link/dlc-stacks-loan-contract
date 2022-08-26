@@ -24,6 +24,7 @@ The following Clarity Traits must be implemented to interact with this contract.
 Used to callback into the calling/protocol contract to provide the uuid of the created DCL, which will be used to reference the DLC going forward.
 
 Params
+user-id:uint - an ID to associate UUIDs with local members
 uuid:string - UUID of the DLC
 
 ### Post Close DLC Callback
@@ -31,8 +32,7 @@ Used to callback into the calling/protocol contract to notify when a liquidation
 
 Params
 uuid:string - UUID of the DLC
-liquidate:boolean
-price:float
+closing-price:uint - the price at which the contract was closed at, with pennies precision
 
 ## Function to call
 ### Register contract
@@ -50,35 +50,41 @@ contract-address:Principal
 
 ### Opening a DLC
 
-When you register a DLC with this contract using the `create-dlc` function, a DLC is opened on our DLC server with the associated outcomes (CETs) and using the provided asset (e.g. BTC) as a price value to be used within the DLC. A list of asset symbols that can be used with Redstone is available here: https://github.com/redstone-finance/redstone-api/blob/main/docs/ALL_SUPPORTED_TOKENS.md
+When you register a DLC with this contract using the `create-dlc` function, a DLC is opened on our DLC server with the associated outcomes (CETs). The current implementation is designed for opening a loan.
 
 The DLC *announcement hash*, which needed to fund the DLC, is available on the website (https://app.dlc.link/ - click Open DLCs), and eventually via an API call, and eventually on-chain as well.
 
 See the comments in the contract for further information about using this function.
 
 Parameters:
-* liquidation-price:float
-* payout-formula:format - TBD
-* post-create-dlc-handler:function - Used to callback into the calling/protocol contract to provide the uuid of the created DCL, which will be used to reference the DLC going forward. See the traits section of this document for more information on this function. 
-* post-close-dlc-handler:function - Used to callback into the calling/protocol contract to notify when a liquidation event occurred and the corresponding price, or simply for reference when a DLC is closed in the normal path. See the traits section of this document for more information on this function. 
+
+(vault-loan-amount uint) (btc-deposit uint) (liquidation-ratio uint) (liquidation-fee uint) (emergency-refund-time uint) (callback-contract principal) (nonce uint))
+
+* vault-loan-amount:uint - the borrowed stablecoin amount, in pennies (e.g. $123.45 = u12345)
+* btc-deposit:uint - the collateral amount, in Sats (e.g. 1 BTC = 100000000)
+* liquidation-ratio:uint - the ratio of collateral/loan below which liquidation will happen, with two decimals precision (e.g. 140% = u14000)
+* liquidation-fee:uint - the fee to be given to the liquidators. This is used to shift the payout-value in the final calculation. Two decimals precison (e.g. 10% = u1000)
+* emergency-refund-time:uint - UNIX timestamp after which the DLC can be reclaimed by either party
+* callback-contract:principal - the contract that will accept the callback
+* nonce/user-id:uint (possibly string in the future) - the protocol/user provided ID to associate with the UUID
 
 ### Closing the DLC
 
 The DLC will be closed in one of two ways.
-1. The `principal` who opened the contract chooses to close it by calling the `close-dlc` function, either from their smart contract, or via an off-chain script. In this case, the end user entering into the DLC gets fully repayed their BTC. 
+1. The `principal` who opened the contract chooses to close it by calling the `close-dlc` function, either from their smart contract, or via an off-chain script. In this case, the end user entering into the DLC gets fully repayed their BTC (payout-ratio of 0.00)
 
 Parameters:
 uuid:string
 
 or
 
-2. When the *public* contract function `early-close-dlc` is called by anyone (including third-parties such as liquidators), with the intention of having the DLC.Link system check the underlying price and potentially trigger a liquidation process.
+1. If a DLC is expected to be below water, the `close-dlc-liquidate` function can initiate a liquidation process. This will, through the DLC.Link Oracle system fetch price data from RedStone to check if liquidation really should happen, and if so, calculates the resulting payout-ratio: this will be used to sign the DLC outcome.
 
 Parameters:
 uuid:string
 
 
-In either case, the contract connects to the Redstone oracle network through the DLC Oracles, to pull the price of the associated asset. This will trigger the calling of the private `close-dlc-internal` function. The DLC.Link backend system catches this event and closes the DLC in the DLC oracle with the associated outcome data. An _attestation hash_ is now created and like the announcement hash, can be acquired via the website or API (or eventually smart contract).
+In either case, a corresponding `-internal` function will be triggered. The DLC.Link backend system catches this event and closes the DLC in the DLC oracle with the associated outcome data. An _attestation hash_ is now created and like the announcement hash, can be acquired via the website or API (or eventually smart contract).
 
 The attestation hash is what will be used by the participants (user, protocol, etc.) to unlock the funds in the DLC.
 
@@ -86,7 +92,7 @@ The attestation hash is what will be used by the participants (user, protocol, e
 
 We are happy to have support and contribution from the community. Please find us on Discord and see below for developer details.
 
-For reference, a sample of this deployed contract can be found here: [dlc-manager-pricefeed-v1-02](https://explorer.stacks.co/txid/ST12S2DB1PKRM1BJ1G5BQS0AB0QPKHRVHWXDBJ27R.dlc-manager-pricefeed-v1-02?chain=testnet)
+For reference, a sample of this deployed contract can be found here: [dlc-manager-pricefeed-v2-01](https://explorer.stacks.co/txid/ST12S2DB1PKRM1BJ1G5BQS0AB0QPKHRVHWXDBJ27R.dlc-manager-pricefeed-v2-01?chain=testnet)
 
 # Setup Development Environment
 
