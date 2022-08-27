@@ -1,11 +1,11 @@
 
-;; sample-protocol-contract
 ;; Sample protocol contract for using DLC.Link.
 ;; This contract is a sample representing a protocol that would call into the DLC.Link management contract
 ;; It borrows from the Clarity trait to
 ;; - Open the dlc
 ;; - Accept the callback and store the returned UUID
 ;; - Close the DLC
+;; - Accept a succesful closing through the closing callback
 
 (use-trait cb-trait .dlc-link-callback-trait.dlc-link-callback-trait)
 (impl-trait .dlc-link-callback-trait.dlc-link-callback-trait)
