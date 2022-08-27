@@ -1,9 +1,6 @@
 import {
   network,
-  contractAddress,
-  assetName,
   unixTimeStamp,
-  strikePrice,
   protocolPrivateKey,
   exampleContractAddress,
   exampleContractName
@@ -12,22 +9,20 @@ import {
 import {
   makeContractCall,
   broadcastTransaction,
-  bufferCVFromString,
   uintCV,
 } from "@stacks/transactions";
 
 const functionName = "setup-user-contract";
 
-// Replace this with the options required for your contract.
 const txOptions = {
   contractAddress: exampleContractAddress,
   contractName: exampleContractName,
   functionName: functionName,
   functionArgs: [
-    uintCV(1000000),
-    uintCV(100000000),
-    uintCV(14000),
-    uintCV(1000),
+    uintCV(1000000),       // loan amount in pennies
+    uintCV(100000000),     // btc-deposit in Sats
+    uintCV(14000),         // liquidation-ratio, two decimals precison
+    uintCV(1000),          // liquidation-fee, two decimals precision
     uintCV(unixTimeStamp), // emergency-refund-time
   ],
   senderKey: protocolPrivateKey,

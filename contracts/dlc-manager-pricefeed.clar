@@ -14,9 +14,9 @@
 (define-constant err-no-price-data (err u3001))
 (define-constant err-cant-unwrap (err u3002))
 
-(define-constant value-shift-2 u100)
-(define-constant value-shift-8 u100000000)
-(define-constant value-shift-16 u10000000000000000)
+(define-constant ten-to-power-2 u100)
+(define-constant ten-to-power-8 u100000000)
+(define-constant ten-to-power-16 u10000000000000000)
 
 ;; status enums
 (define-constant status-open u0)
@@ -47,7 +47,6 @@
     vault-loan-amount: uint,
     liquidation-ratio: uint,
     liquidation-fee: uint,
-    strike-price: uint,
     btc-deposit: uint,
     closing-price: (optional uint),
     actual-closing-time: uint,
@@ -99,9 +98,6 @@
 
 ;;opens a new dlc - called by the DLC Oracle system
 (define-public (create-dlc-internal (uuid (buff 8)) (vault-loan-amount uint) (btc-deposit uint) (liquidation-ratio uint) (liquidation-fee uint) (emergency-refund-time uint) (creator principal) (callback-contract <cb-trait>) (nonce uint))
-  (let (
-    (strike-price (/ (* vault-loan-amount liquidation-ratio) u10000)) 
-  )
   (begin
     (asserts! (is-eq contract-owner tx-sender) err-unauthorised)
     (asserts! (is-none (map-get? dlcs uuid)) err-dlc-already-added)
@@ -110,7 +106,6 @@
       vault-loan-amount: vault-loan-amount,
       liquidation-ratio: liquidation-ratio,
       liquidation-fee: liquidation-fee,
-      strike-price: strike-price,
       btc-deposit: btc-deposit,
       closing-price: none, 
       actual-closing-time: u0, 
@@ -122,7 +117,6 @@
       vault-loan-amount: vault-loan-amount, 
       liquidation-ratio: liquidation-ratio,
       liquidation-fee: liquidation-fee,
-      strike-price: strike-price,
       btc-deposit: btc-deposit,
       emergency-refund-time: emergency-refund-time,
       creator: creator,
@@ -130,7 +124,7 @@
     })
     (try! (contract-call? callback-contract post-create-dlc-handler nonce uuid))
     (nft-mint? open-dlc uuid dlc-manager-contract))) ;;mint an open-dlc nft to keep track of open dlcs
-  )
+  
 
 ;; Regular, repaid loan closing request
 (define-public (close-dlc (uuid (buff 8)))
@@ -167,7 +161,7 @@
 (define-public (close-dlc-internal (uuid (buff 8)) (callback-contract <cb-trait>)) 
 (let (
     (dlc (unwrap! (get-dlc uuid) err-unknown-dlc))
-    (closing-price u0)
+    (closing-price none)
     )
     (asserts! (is-eq contract-owner tx-sender) err-unauthorised)
     (asserts! (is-eq (get status dlc) status-open) err-already-closed)
@@ -199,46 +193,53 @@
     (map-set dlcs uuid (merge dlc { closing-price: (get value (element-at entries u0)), actual-closing-time: (/ timestamp u1000), status: status-closed })) ;;timestamp is in milliseconds so we have to convert it to seconds to keep the timestamps consistent
     (print {
       uuid: uuid,
-      payout-curve-value: (get-payout-curve-value uuid price),
+      payout-curve-value: (get-payout-ratio uuid price),
       closing-price: price,
       actual-closing-time: (/ timestamp u1000),
       event-source: "dlclink:close-dlc-liquidate-internal:v2" })
-    (try! (contract-call? callback-contract post-close-dlc-handler uuid price))
+    (try! (contract-call? callback-contract post-close-dlc-handler uuid (some price)))
     (nft-burn? open-dlc uuid dlc-manager-contract))) ;;burn the open-dlc nft related to the UUID
 
-;;Checks if a given DLC needs liquidation at the given btc-price (shifted by 10**8)
+;; Checks if a given DLC needs liquidation at the given btc-price (shifted by 10**8)
+;; Example params: uuid: 'someuuid', btc-price: 2400000000000 ($24,000)
 (define-read-only (check-liquidation (uuid (buff 8)) (btc-price uint)) 
   (let (
     (dlc (unwrap! (get-dlc uuid) err-unknown-dlc))
     (collateral-value (get-collateral-value (get btc-deposit dlc) btc-price))
+    (strike-price (/ (* (get vault-loan-amount dlc) (get liquidation-ratio dlc)) u10000)) 
     )
-    (ok (<= collateral-value (get strike-price dlc)))
+    (ok (<= collateral-value strike-price))
   )
 )
 
-;; Return the resulting payout-curve-value at the given btc-price (shifted by 10**8)
-;; using uints, this means return values between 0-10000000000
-(define-read-only (get-payout-curve-value (uuid (buff 8)) (btc-price uint))
+;; Returns the resulting payout-ratio at the given btc-price (shifted by 10**8).
+;; This value is sent to the Oracle system for signing a point on the linear payout curve.
+;; using uints, this means return values between 0-10000000000 (0.00-100.00 with room for extra precision in the future)
+;; 0.00 means the borrower gets back its deposit, 100.00 means the entire collateral gets taken by the protocol.
+(define-read-only (get-payout-ratio (uuid (buff 8)) (btc-price uint))
   (let (
     (dlc (unwrap! (get-dlc uuid) err-unknown-dlc))
     (collateral-value (get-collateral-value (get btc-deposit dlc) btc-price))
-    (sell-to-liquidators-ratio (/ (shift-value (get vault-loan-amount dlc) value-shift-16) collateral-value))
-    (payout-curve-value (* sell-to-liquidators-ratio (+ u100 (get liquidation-fee dlc))))
-    (payout-curve-unshifted (unshift-value payout-curve-value value-shift-8))
+    (sell-to-liquidators-ratio (/ (shift-value (get vault-loan-amount dlc) ten-to-power-16) collateral-value)) ;; the amount the protocol has to sell to liquidators
+    (payout-ratio-precise (* sell-to-liquidators-ratio (+ u100 (get liquidation-fee dlc)))) ;; the additional liquidation-fee percentage is calculated into the result
+    (payout-ratio (unshift-value payout-ratio-precise ten-to-power-8))
     )
+    ;; We normalise the result to be between 0.00-100.00
     (begin 
       (if (unwrap! (check-liquidation uuid btc-price) err-cant-unwrap)
-          (if (>= payout-curve-unshifted (shift-value u1000 value-shift-8)) 
-            (ok (shift-value u1000 value-shift-8)) 
-            (ok payout-curve-unshifted))
+          (if (>= payout-ratio (shift-value u1000 ten-to-power-8)) 
+            (ok (shift-value u1000 ten-to-power-8)) 
+            (ok payout-ratio))
         (ok u0)
       )  
     )
   )
 )
 
+;; Calculating loan collateral value for a given btc-price * (10**8), with pennies precision.
+;; Since the deposit is in Sats, after multiplication we first we unshift by 16, then shift by 2 to get pennies precision ($12345.67 = u1234567)
 (define-private (get-collateral-value (btc-deposit uint) (btc-price uint))
-  (shift-value (unshift-value (* btc-deposit btc-price) value-shift-16) value-shift-2)
+  (shift-value (unshift-value (* btc-deposit btc-price) ten-to-power-16) ten-to-power-2)
 )
 
 (define-read-only (is-trusted-oracle (pubkey (buff 33)))

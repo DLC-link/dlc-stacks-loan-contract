@@ -28,18 +28,19 @@
   uint
   {
     dlc_uuid: (optional (buff 8)),
-    user-id: uint,
+    user-id: uint, ;; a field to used to map the returned UUIDs to
     ;; Other data about the user and their specific contract
     active: bool,
     vault-loan: uint, ;; the borrowed amount
     vault-collateral: uint, ;; btc deposit in sats
-    liquidation-ratio: uint,
-    liquidation-fee: uint,
-    closing-price: uint
+    liquidation-ratio: uint, ;; the collateral/loan ratio below which liquidation can happen, with two decimals precision (140% = u14000)
+    liquidation-fee: uint,  ;; additional fee taken during liquidation, two decimals precision (10% = u1000)
+    closing-price: (optional uint)  ;; In case of liquidation, the closing BTC price will be stored here
   }
 )
 
 ;; A map to link uuids and user-ids
+;; used to reverse-lookup user-ids when the dlc-manager contract gives us a UUID
 (define-map uuid-user-id 
   (buff 8) 
   uint
@@ -82,7 +83,7 @@
             vault-collateral: btc-deposit,
             liquidation-ratio: liquidation-ratio,
             liquidation-fee: liquidation-fee,
-            closing-price: u0
+            closing-price: none
           })
           (unwrap! (ok (as-contract (contract-call? .dlc-manager-pricefeed-v2-01 create-dlc vault-loan-amount btc-deposit liquidation-ratio liquidation-fee emergency-refund-time target user-id))) err-contract-call-failed)
       )
@@ -90,9 +91,11 @@
 )
 
 
-;; implemented from the trait, this is what is used to pass back the uuid created by the DLC system
+;; Implemented from the trait, this is what is used to pass back the uuid created by the DLC system
+;; called by the dlc-manager contract
 (define-public (post-create-dlc-handler (user-id uint) (uuid (buff 8)))
     (begin
+      ;; If creation was successful, we save the results in the local maps
         (print { uuid: uuid, user-id: user-id })
         (map-set usercontracts user-id (
             merge (unwrap! (map-get? usercontracts user-id) err-unknown-user-contract ) {
@@ -120,6 +123,7 @@
   )
 )
 
+;; An example function to initiate the liquidation of a DLC loan contract.
 (define-public (close-dlc-liquidate (user-id uint) (btc-price uint)) 
   (let (
     (usercontract (unwrap! (get-usercontract user-id) err-unknown-user-contract))
@@ -133,6 +137,8 @@
   )
 )
 
+;; A wrapper function around the dlc-manager contract's check-liquidation.
+;; Used as a local check before initiating liquidation
 (define-private (check-liquidation (uuid (buff 8)) (btc-price uint))
   (let (
     ) 
@@ -142,7 +148,8 @@
 )
 
 ;; Implemented from the trait
-(define-public (post-close-dlc-handler (uuid (buff 8)) (closing-price uint))
+;; When this function is called by the dlc-manager contract, we know the closing was successful, so we can finalise changes in this contract.
+(define-public (post-close-dlc-handler (uuid (buff 8)) (closing-price (optional uint)))
   (let (
     (user-id (unwrap! (get-user-id-by-uuid uuid ) err-cant-unwrap ))
     (usercontract (unwrap! (get-usercontract user-id) err-unknown-user-contract))

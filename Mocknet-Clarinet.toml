@@ -14,10 +14,6 @@ depends_on = ["dlc-link-callback-trait"]
 
 ##### Development contracts:
 
-# [contracts.redstone-verify]
-# path = "contracts/external/redstone-verify.clar"
-# depends_on = []
-
 [contracts.sample-protocol-contract]
 path = "example/sample-protocol-contract.clar"
 depends_on = ["dlc-manager-pricefeed-v2-01", "dlc-link-callback-trait"]

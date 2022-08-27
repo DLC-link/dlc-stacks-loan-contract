@@ -25,25 +25,17 @@ const pricePackage: PricePackage = {
   prices: [{ symbol: "BTC", value: 23501.669932 }]
 }
 
-const pricePackageLow: PricePackage = {
+const pricePackageForLiquidation: PricePackage = {
   timestamp: 1647332581,
   prices: [{ symbol: "BTC", value: 13588.669932 }]
 }
 
-const pricePackageWrong: PricePackage = {
-  timestamp: 1647332581,
-  prices: [{ symbol: "ETH", value: 2.5 }]
-}
-
 const packageCV = pricePackageToCV(pricePackage);
-const wrongPackageCV = pricePackageToCV(pricePackageWrong);
-const lowPackageCV = pricePackageToCV(pricePackageLow);
+const packageCVForLiquidation = pricePackageToCV(pricePackageForLiquidation);
 
 const signature = "0x4ee83f2bdc6d67619e13c5786c42aa66a899cc63229310400247bac0dd22e99454cec834a98b56a5042bcec5e709a76e90d072569e5db855e58e4381d0adb0c201";
 
-const lowSignature = "0x3256910f5d0788ee308baecd3787a36ab2e3a8ff3fb4d0fc4638c84ba48957b82876b71eb58751366dd7a8a6ae1f2040120706742676ddc2187170932bb344e901";
-
-const wrongPackageSignature = "0x5cf7810162047b1dd7f9788259431bc971f3be913c5a7875169f78f3a83b7ed662c068fd55000a37c7fcbb3881b31f59d707a5d33163bb7f4280ba43efb48f5800";
+const signatureForLiquidation = "0x3256910f5d0788ee308baecd3787a36ab2e3a8ff3fb4d0fc4638c84ba48957b82876b71eb58751366dd7a8a6ae1f2040120706742676ddc2187170932bb344e901";
 
 function setTrustedOracle(chain: Chain, senderAddress: string): Block {
   return chain.mineBlock([
@@ -284,7 +276,7 @@ Clarinet.test({
         setTrustedOracle(chain, deployer.address);
 
         let block = chain.mineBlock([
-            Tx.contractCall(dlcManagerContract, "close-dlc-liquidate-internal", [types.buff(UUID), lowPackageCV.timestamp, lowPackageCV.prices, lowSignature, types.principal(contractPrincipal(deployer_2, callbackContract))], deployer.address),
+            Tx.contractCall(dlcManagerContract, "close-dlc-liquidate-internal", [types.buff(UUID), packageCVForLiquidation.timestamp, packageCVForLiquidation.prices, signatureForLiquidation, types.principal(contractPrincipal(deployer_2, callbackContract))], deployer.address),
             Tx.contractCall(dlcManagerContract, "get-dlc", [types.buff(UUID)], deployer.address)
         ]);
 
@@ -345,7 +337,7 @@ Clarinet.test({
       setTrustedOracle(chain, deployer.address);
 
       let block = chain.mineBlock([
-          Tx.contractCall(dlcManagerContract, "close-dlc-liquidate-internal", [types.buff(UUID), lowPackageCV.timestamp, lowPackageCV.prices, lowSignature, types.principal(contractPrincipal(deployer_2, callbackContract))], deployer.address),
+          Tx.contractCall(dlcManagerContract, "close-dlc-liquidate-internal", [types.buff(UUID), packageCVForLiquidation.timestamp, packageCVForLiquidation.prices, signatureForLiquidation, types.principal(contractPrincipal(deployer_2, callbackContract))], deployer.address),
           Tx.contractCall(dlcManagerContract, "close-dlc-liquidate", [types.buff(UUID)], deployer.address),
       ]);
 

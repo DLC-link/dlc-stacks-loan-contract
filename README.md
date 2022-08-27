@@ -19,20 +19,22 @@ This contract acts to feed the outcome of the DLC. By using a smart contract for
 # How to interact with this contract
 
 ## Clarity Traits
-The following Clarity Traits must be implemented to interact with this contract.
+The following Clarity Traits must be implemented to interact with this contract. See `/contracts/dlc-link-callback-trait.clar`
 ### Post Create DLC Callback
 Used to callback into the calling/protocol contract to provide the uuid of the created DCL, which will be used to reference the DLC going forward.
 
-Params
-user-id:uint - an ID to associate UUIDs with local members
-uuid:string - UUID of the DLC
+Parameters:
+
+* nonce:uint - an ID used to associate a create function call with the callback
+* uuid:string - UUID of the DLC
 
 ### Post Close DLC Callback
 Used to callback into the calling/protocol contract to notify when a liquidation event occurred and the corresponding price, or simply for reference when a DLC is closed in the normal path.
 
-Params
-uuid:string - UUID of the DLC
-closing-price:uint - the price at which the contract was closed at, with pennies precision
+Parameters:
+
+* uuid:string - UUID of the DLC
+* closing-price:uint - the price at which the contract was closed at, with pennies precision (u0 for a non-liquidation close)
 
 ## Functions to call
 ### Register contract
@@ -58,29 +60,29 @@ See the comments in the contract for further information about using this functi
 
 Parameters:
 
-(vault-loan-amount uint) (btc-deposit uint) (liquidation-ratio uint) (liquidation-fee uint) (emergency-refund-time uint) (callback-contract principal) (nonce uint))
-
 * vault-loan-amount:uint - the borrowed stablecoin amount, in pennies (e.g. $123.45 = u12345)
 * btc-deposit:uint - the collateral amount, in Sats (e.g. 1 BTC = 100000000)
 * liquidation-ratio:uint - the ratio of collateral/loan below which liquidation will happen, with two decimals precision (e.g. 140% = u14000)
 * liquidation-fee:uint - the fee to be given to the liquidators. This is used to shift the payout-value in the final calculation. Two decimals precison (e.g. 10% = u1000)
 * emergency-refund-time:uint - UNIX timestamp after which the DLC can be reclaimed by either party
-* callback-contract:principal - the contract that will accept the callback
-* nonce/user-id:uint (possibly string in the future) - the protocol/user provided ID to associate with the UUID
+* callback-contract:principal - The contract that sends the request, and will accept the callback. 
+* nonce:uint - the protocol/user provided ID to associate with the UUID
 
 ### Closing the DLC
 
 The DLC will be closed in one of two ways.
-1. The `principal` who opened the contract chooses to close it by calling the `close-dlc` function, either from their smart contract, or via an off-chain script. In this case, the end user entering into the DLC gets fully repayed their BTC (payout-ratio of 0.00)
+1. The `principal` who opened the contract chooses to close it by calling the `close-dlc` function, either from their smart contract, or via an off-chain script. In this case, the end user entering into the DLC gets fully repaid their BTC. This can be thought of as closing the loan with a full repayment (payout-ratio of u0).
 
 Parameters:
+
 uuid:string
 
 or
 
-1. If a DLC is expected to be below water, the `close-dlc-liquidate` function can initiate a liquidation process. This will, through the DLC.Link Oracle system fetch price data from RedStone to check if liquidation really should happen, and if so, calculates the resulting payout-ratio: this will be used to sign the DLC outcome.
+1. If a loan's collateral value is expected to be under the strike-price, the `close-dlc-liquidate` function can initiate a liquidation process. This will, through the DLC.Link Oracle system fetch price data from RedStone to check if liquidation really should happen, and if so, calculates the resulting payout-ratio: this will be used to sign the DLC outcome.
 
 Parameters:
+
 uuid:string
 
 
@@ -270,6 +272,9 @@ Flow of the Redstone oracle requests:
 closing-price comming from the oracle is not scaled eg.: BTC price: 3036091214130 needs to be divided by 10 \*\* 8 on the client side.
 
 Similarly, all number values are unsigned integers, so utility functions are implemented for shifting/unshifting them to get the desired precision in the correct places.
+
+## check-liquidation function
+This read-only function takes two parameters: a UUID, and btc-price (shifted by 10**8). It returns true if the DLC associated with the given UUID should be liquidated at the provided btc-price. This is calculated by comparing the underlying collateral value with the strike-price (a value dependent on the liquidation-ratio and the borrowed loan amount).
 
 # Scripts
 
