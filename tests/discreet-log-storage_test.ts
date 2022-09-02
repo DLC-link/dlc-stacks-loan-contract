@@ -12,7 +12,7 @@ import type { PricePackage, Block } from "./deps.ts";
 const BTChex = "BTC";
 const UUID = "fakeuuid";
 const nftAssetContract = "open-dlc";
-const dlcManagerContract = "dlc-manager-pricefeed-v2-01";
+const dlcManagerContract = "dlc-manager-loan-v0";
 const callbackContract = "callback-contract";
 
 const contractPrincipal = (deployer: Account, contract: string) => `${deployer.address}.${contract}`;

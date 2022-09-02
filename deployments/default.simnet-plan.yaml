@@ -51,9 +51,9 @@ plan:
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: contracts/dlc-link-callback-trait.clar
         - emulated-contract-publish:
-            contract-name: dlc-manager-pricefeed-v2-01
+            contract-name: dlc-manager-loan-v0
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/dlc-manager-pricefeed.clar
+            path: contracts/dlc-manager-loan.clar
         - emulated-contract-publish:
             contract-name: callback-contract
             emulated-sender: STNHKEPYEPJ8ET55ZZ0M5A34J0R3N5FM2CMMMAZ6

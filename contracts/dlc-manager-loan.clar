@@ -26,7 +26,7 @@
 (define-constant contract-owner tx-sender)
 
 ;; Current contract's name
-(define-constant dlc-manager-contract .dlc-manager-pricefeed-v2-01)
+(define-constant dlc-manager-contract .dlc-manager-loan-v0)
 
 ;; Importing the trait to use it as a type
 (use-trait cb-trait .dlc-link-callback-trait.dlc-link-callback-trait)

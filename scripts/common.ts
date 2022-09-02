@@ -11,7 +11,7 @@ export const protocolPrivateKey = config.protocolPrivateKey;
 export const tokenName = 'open-dlc';
 
 // Generally only changing these for the scripts:
-export const contractName = "dlc-manager-pricefeed-v2-01";
+export const contractName = "dlc-manager-loan-v0";
 export const assetName = 'BTC';
 export const strikePrice = 1500;
 // export const unixTimeStamp = 1658235003;

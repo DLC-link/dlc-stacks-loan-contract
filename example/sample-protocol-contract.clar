@@ -85,7 +85,7 @@
             liquidation-fee: liquidation-fee,
             closing-price: none
           })
-          (unwrap! (ok (as-contract (contract-call? .dlc-manager-pricefeed-v2-01 create-dlc vault-loan-amount btc-deposit liquidation-ratio liquidation-fee emergency-refund-time target user-id))) err-contract-call-failed)
+          (unwrap! (ok (as-contract (contract-call? .dlc-manager-loan-v0 create-dlc vault-loan-amount btc-deposit liquidation-ratio liquidation-fee emergency-refund-time target user-id))) err-contract-call-failed)
       )
     )
 )
@@ -118,7 +118,7 @@
     )
     (asserts! (is-eq contract-owner tx-sender)  err-unauthorised)
     (begin
-      (unwrap! (ok (as-contract (contract-call? .dlc-manager-pricefeed-v2-01 close-dlc uuid))) err-contract-call-failed)
+      (unwrap! (ok (as-contract (contract-call? .dlc-manager-loan-v0 close-dlc uuid))) err-contract-call-failed)
     )
   )
 )
@@ -132,7 +132,7 @@
     (asserts! (is-eq contract-owner tx-sender) err-unauthorised)
     (asserts! (unwrap! (check-liquidation uuid btc-price) err-cant-unwrap) err-doesnt-need-liquidation)
     (begin
-      (unwrap! (ok (as-contract (contract-call? .dlc-manager-pricefeed-v2-01 close-dlc-liquidate uuid))) err-contract-call-failed)
+      (unwrap! (ok (as-contract (contract-call? .dlc-manager-loan-v0 close-dlc-liquidate uuid))) err-contract-call-failed)
     )
   )
 )
@@ -142,7 +142,7 @@
 (define-private (check-liquidation (uuid (buff 8)) (btc-price uint))
   (let (
     ) 
-    (begin (unwrap! (ok (as-contract (contract-call? .dlc-manager-pricefeed-v2-01 check-liquidation uuid btc-price))) err-contract-call-failed)
+    (begin (unwrap! (ok (as-contract (contract-call? .dlc-manager-loan-v0 check-liquidation uuid btc-price))) err-contract-call-failed)
     )
   )
 )
