@@ -89,7 +89,7 @@
         creator: tx-sender,
         callback-contract: callback-contract,
         nonce: nonce,
-        event-source: "dlclink:create-dlc:v2" 
+        event-source: "dlclink:create-dlc:v0" 
       })
       (ok true)
     )
@@ -120,7 +120,7 @@
       btc-deposit: btc-deposit,
       emergency-refund-time: emergency-refund-time,
       creator: creator,
-      event-source: "dlclink:create-dlc-internal:v2" 
+      event-source: "dlclink:create-dlc-internal:v0" 
     })
     (try! (contract-call? callback-contract post-create-dlc-handler nonce uuid))
     (nft-mint? open-dlc uuid dlc-manager-contract))) ;;mint an open-dlc nft to keep track of open dlcs
@@ -137,7 +137,7 @@
       uuid: uuid,
       creator: (get creator dlc),
       caller: tx-sender,
-      event-source: "dlclink:close-dlc:v2"
+      event-source: "dlclink:close-dlc:v0"
       })
     (ok true)
   ))
@@ -152,7 +152,7 @@
       uuid: uuid,
       creator: (get creator dlc),
       caller: tx-sender,
-      event-source: "dlclink:close-dlc-liquidate:v2" 
+      event-source: "dlclink:close-dlc-liquidate:v0" 
       })
     (ok true)
   ))
@@ -169,7 +169,7 @@
     (print {
       uuid: uuid,
       closing-price: closing-price,
-      event-source: "dlclink:close-dlc-internal:v2" })
+      event-source: "dlclink:close-dlc-internal:v0" })
     (try! (contract-call? callback-contract post-close-dlc-handler uuid closing-price))
     (nft-burn? open-dlc uuid dlc-manager-contract)))
 
@@ -196,7 +196,7 @@
       payout-ratio: (get-payout-ratio uuid price),
       closing-price: price,
       actual-closing-time: (/ timestamp u1000),
-      event-source: "dlclink:close-dlc-liquidate-internal:v2" })
+      event-source: "dlclink:close-dlc-liquidate-internal:v0" })
     (try! (contract-call? callback-contract post-close-dlc-handler uuid (some price)))
     (nft-burn? open-dlc uuid dlc-manager-contract))) ;;burn the open-dlc nft related to the UUID
 
@@ -260,7 +260,7 @@
     (asserts! (is-eq contract-owner tx-sender) err-not-contract-owner)
     (print { 
       contract-address: contract-address,
-      event-source: "dlclink:register-contract:v2" })
+      event-source: "dlclink:register-contract:v0" })
     (nft-mint? registered-contract (contract-of contract-address) dlc-manager-contract)
   )
 )
@@ -270,7 +270,7 @@
     (asserts! (is-eq contract-owner tx-sender) err-not-contract-owner)
     (print { 
       contract-address: contract-address,
-      event-source: "dlclink:unregister-contract:v2" })
+      event-source: "dlclink:unregister-contract:v0" })
     (nft-burn? registered-contract (contract-of contract-address) dlc-manager-contract)
   )
 )

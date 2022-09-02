@@ -87,7 +87,7 @@ Clarinet.test({
       assertEquals(event.contract_event.topic, "print");
       assertStringIncludes(event.contract_event.value, "btc-deposit: u100000000");
       assertStringIncludes(event.contract_event.value, "creator: " + contractPrincipal(deployer_2, callbackContract));
-      assertStringIncludes(event.contract_event.value, 'event-source: "dlclink:create-dlc:v2"');
+      assertStringIncludes(event.contract_event.value, 'event-source: "dlclink:create-dlc:v0"');
   },
 });
 
@@ -107,7 +107,7 @@ Clarinet.test({
     assertEquals(typeof createDLCInternalPrintEvent, 'object');
     assertEquals(createDLCInternalPrintEvent.type, 'contract_event');
     assertEquals(createDLCInternalPrintEvent.contract_event.topic, "print");
-    assertStringIncludes(createDLCInternalPrintEvent.contract_event.value, 'btc-deposit: u100000000, creator: STNHKEPYEPJ8ET55ZZ0M5A34J0R3N5FM2CMMMAZ6.callback-contract, emergency-refund-time: u10, event-source: "dlclink:create-dlc-internal:v2", liquidation-fee: u1000, liquidation-ratio: u14000, uuid: 0x66616b6575756964, vault-loan-amount: u1000000')
+    assertStringIncludes(createDLCInternalPrintEvent.contract_event.value, 'btc-deposit: u100000000, creator: STNHKEPYEPJ8ET55ZZ0M5A34J0R3N5FM2CMMMAZ6.callback-contract, emergency-refund-time: u10, event-source: "dlclink:create-dlc-internal:v0", liquidation-fee: u1000, liquidation-ratio: u14000, uuid: 0x66616b6575756964, vault-loan-amount: u1000000')
 
     assertEquals(typeof callbackPrintEvent, 'object');
     assertEquals(callbackPrintEvent.type, 'contract_event');
@@ -220,7 +220,7 @@ Clarinet.test({
       assertEquals(event.type, 'contract_event');
       assertEquals(event.contract_event.topic, "print");
       assertStringIncludes(event.contract_event.value, "uuid: 0x66616b6575756964");
-      assertStringIncludes(event.contract_event.value, 'event-source: "dlclink:close-dlc:v2"');
+      assertStringIncludes(event.contract_event.value, 'event-source: "dlclink:close-dlc:v0"');
   },
 });
 
@@ -243,7 +243,7 @@ Clarinet.test({
       assertEquals(event.type, 'contract_event');
       assertEquals(event.contract_event.topic, "print");
       assertStringIncludes(event.contract_event.value, "uuid: 0x66616b6575756964");
-      assertStringIncludes(event.contract_event.value, 'event-source: "dlclink:close-dlc-liquidate:v2"');
+      assertStringIncludes(event.contract_event.value, 'event-source: "dlclink:close-dlc-liquidate:v0"');
   },
 });
 
@@ -286,7 +286,7 @@ Clarinet.test({
         assertEquals(typeof printEvent2, 'object');
         assertEquals(printEvent2.type, 'contract_event');
         assertEquals(printEvent2.contract_event.topic, "print");
-        assertStringIncludes(printEvent2.contract_event.value, 'actual-closing-time: u1647332, closing-price: u1358866993200, event-source: "dlclink:close-dlc-liquidate-internal:v2", payout-ratio: (ok u80953782749), uuid: 0x66616b6575756964')
+        assertStringIncludes(printEvent2.contract_event.value, 'actual-closing-time: u1647332, closing-price: u1358866993200, event-source: "dlclink:close-dlc-liquidate-internal:v0", payout-ratio: (ok u80953782749), uuid: 0x66616b6575756964')
 
         const contractEvent = block.receipts[0].events[1];
 
