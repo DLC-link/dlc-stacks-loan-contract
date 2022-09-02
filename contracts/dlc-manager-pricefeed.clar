@@ -193,7 +193,7 @@
     (map-set dlcs uuid (merge dlc { closing-price: (get value (element-at entries u0)), actual-closing-time: (/ timestamp u1000), status: status-closed })) ;;timestamp is in milliseconds so we have to convert it to seconds to keep the timestamps consistent
     (print {
       uuid: uuid,
-      payout-curve-value: (get-payout-ratio uuid price),
+      payout-ratio: (get-payout-ratio uuid price),
       closing-price: price,
       actual-closing-time: (/ timestamp u1000),
       event-source: "dlclink:close-dlc-liquidate-internal:v2" })

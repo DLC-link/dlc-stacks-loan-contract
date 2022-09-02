@@ -1,5 +1,7 @@
 (define-constant err-cant-unwrap (err u1000))
 
+(impl-trait 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.dlc-link-callback-trait.dlc-link-callback-trait)
+
 (define-public (post-create-dlc-handler (nonce uint) (uuid (buff 8)))
     (begin
         (print { uuid: uuid, nonce: nonce, event-source: "callback-mock-post-create" })
@@ -7,7 +9,7 @@
     )
 )
 
-(define-public (post-close-dlc-handler (uuid (buff 8)) (closing-price uint)) 
+(define-public (post-close-dlc-handler (uuid (buff 8)) (closing-price (optional uint))) 
     (begin
         (print { uuid: uuid, closing-price: closing-price, event-source: "callback-mock-post-close" })
         (ok true)
