@@ -14,6 +14,6 @@ depends_on = ["dlc-link-callback-trait"]
 
 ##### Development contracts:
 
-[contracts.sample-protocol-contract]
+[contracts.sample-protocol-loan-v0]
 path = "example/sample-protocol-contract.clar"
 depends_on = ["dlc-manager-loan-v0", "dlc-link-callback-trait"]

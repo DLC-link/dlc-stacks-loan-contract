@@ -1,17 +1,13 @@
 import { makeContractDeploy, broadcastTransaction, AnchorMode } from '@stacks/transactions';
-import { StacksTestnet, StacksMainnet } from '@stacks/network';
 import { readFileSync } from 'fs';
-import { protocolPrivateKey } from './common';
-
-// for mainnet, use `StacksMainnet()`
-const network = new StacksTestnet();
+import { exampleContractName, network, protocolPrivateKey } from './common';
 
 const txOptions = {
-  contractName: 'sample-protocol-contract',
+  contractName: exampleContractName,
   codeBody: readFileSync('example/sample-protocol-contract.clar').toString(),
   senderKey: protocolPrivateKey,
   network,
-  anchorMode: AnchorMode.Any,
+  anchorMode: 1,
 };
 (async () => {
 const transaction = await makeContractDeploy(txOptions);

@@ -6,7 +6,7 @@ import {
 } from "@stacks/transactions";
 
 const functionName = "is-contract-registered";
-const protocolContractName = "sample-protocol-contract"
+const protocolContractName = "sample-protocol-loan-v0"
 
 const txOptions = {
   contractAddress: contractAddress,

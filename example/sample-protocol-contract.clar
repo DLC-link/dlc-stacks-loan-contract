@@ -21,7 +21,7 @@
 (define-constant contract-owner tx-sender)
 
 ;; Contract name bindings
-(define-constant sample-protocol-contract .sample-protocol-contract)
+(define-constant sample-protocol-contract .sample-protocol-loan-v0)
 
 ;; A map to store "usercontracts": information about a DLC
 (define-map usercontracts

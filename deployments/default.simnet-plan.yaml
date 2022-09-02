@@ -59,6 +59,6 @@ plan:
             emulated-sender: STNHKEPYEPJ8ET55ZZ0M5A34J0R3N5FM2CMMMAZ6
             path: tests/callback-contract-mock.clar
         - emulated-contract-publish:
-            contract-name: sample-protocol-contract
+            contract-name: sample-protocol-loan-v0
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: example/sample-protocol-contract.clar
