@@ -377,7 +377,7 @@ Clarinet.test({
       ]);
 
       const err = block.receipts[0].result.expectErr();
-      assertEquals(err, "u100"); // err-not-contract-owner
+      assertEquals(err, "u2001"); // err-not-contract-owner
   },
 });
 

@@ -17,7 +17,7 @@
 (define-constant ten-to-power-8 u100000000)
 (define-constant ten-to-power-16 u10000000000000000)
 
-;; status enums
+;; Status enums
 (define-constant status-open u0)
 (define-constant status-closed u1)
 
@@ -95,7 +95,7 @@
   ) 
 )
 
-;;opens a new dlc - called by the DLC Oracle system
+;; Opens a new DLC - called by the DLC Oracle system
 (define-public (create-dlc-internal (uuid (buff 8)) (vault-loan-amount uint) (btc-deposit uint) (liquidation-ratio uint) (liquidation-fee uint) (emergency-refund-time uint) (creator principal) (callback-contract <cb-trait>) (nonce uint))
   (begin
     (asserts! (is-eq contract-owner tx-sender) err-unauthorised)
@@ -172,7 +172,7 @@
     (try! (contract-call? callback-contract post-close-dlc-handler uuid closing-price))
     (nft-burn? open-dlc uuid dlc-manager-contract)))
 
-;;Close the dlc with the oracle data. This is called by the DLC Oracle service
+;; Close the dlc with the oracle data. This is called by the DLC Oracle service
 (define-public (close-dlc-liquidate-internal (uuid (buff 8)) (timestamp uint) (entries (list 10 {symbol: (buff 32), value: uint})) (signature (buff 65)) (callback-contract <cb-trait>))
   (let (
     ;; Recover the pubkey of the signer.
@@ -236,7 +236,7 @@
 )
 
 ;; Calculating loan collateral value for a given btc-price * (10**8), with pennies precision.
-;; Since the deposit is in Sats, after multiplication we first we unshift by 16, then shift by 2 to get pennies precision ($12345.67 = u1234567)
+;; Since the deposit is in Sats, after multiplication we first unshift by 16, then shift by 2 to get pennies precision ($12345.67 = u1234567)
 (define-private (get-collateral-value (btc-deposit uint) (btc-price uint))
   (shift-value (unshift-value (* btc-deposit btc-price) ten-to-power-16) ten-to-power-2)
 )
