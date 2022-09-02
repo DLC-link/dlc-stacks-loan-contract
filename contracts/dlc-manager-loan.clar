@@ -1,5 +1,4 @@
 ;;ERROR CODES
-(define-constant err-not-contract-owner (err u100))
 (define-constant err-untrusted-oracle (err u101))
 (define-constant err-stale-data (err u102))
 (define-constant err-unauthorised (err u2001))
@@ -248,7 +247,7 @@
 
 (define-public (set-trusted-oracle (pubkey (buff 33)) (trusted bool))
   (begin
-    (asserts! (is-eq contract-owner tx-sender) err-not-contract-owner)
+    (asserts! (is-eq contract-owner tx-sender) err-unauthorised)
     (ok (map-set trusted-oracles pubkey trusted))
   )
 )
@@ -257,7 +256,7 @@
 ;; This is picked up by the Observer infrastructure to start listening to contract-calls of our public functions.
 (define-public (register-contract (contract-address <cb-trait>))
   (begin
-    (asserts! (is-eq contract-owner tx-sender) err-not-contract-owner)
+    (asserts! (is-eq contract-owner tx-sender) err-unauthorised)
     (print { 
       contract-address: contract-address,
       event-source: "dlclink:register-contract:v0" })
@@ -267,7 +266,7 @@
 
 (define-public (unregister-contract (contract-address <cb-trait>))
   (begin
-    (asserts! (is-eq contract-owner tx-sender) err-not-contract-owner)
+    (asserts! (is-eq contract-owner tx-sender) err-unauthorised)
     (print { 
       contract-address: contract-address,
       event-source: "dlclink:unregister-contract:v0" })
