@@ -143,7 +143,7 @@ Clarinet.test({
 });
 
 Clarinet.test({
-  name: "check-liquidation returns correct liquidation status for given price",
+  name: "check-liquidation returns true for a loan under water",
   async fn(chain: Chain, accounts: Map<string, Account>) {
     const deployer = accounts.get('deployer')!;
     const deployer_2 = accounts.get('deployer_2')!;
@@ -151,12 +151,26 @@ Clarinet.test({
     createNewDLC(chain, deployer, contractPrincipal(deployer_2, callbackContract));
 
     let block = chain.mineBlock([
-      Tx.contractCall(dlcManagerContract, "check-liquidation", [types.buff(UUID), types.uint(shiftPriceValue(14500))], deployer.address),
       Tx.contractCall(dlcManagerContract, "check-liquidation", [types.buff(UUID), types.uint(shiftPriceValue(14000))], deployer.address)
     ]);
 
+    block.receipts[0].result.expectOk().expectBool(true);
+ }
+})
+
+Clarinet.test({
+  name: "check-liquidation returns false for a healthy loan",
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+    const deployer = accounts.get('deployer')!;
+    const deployer_2 = accounts.get('deployer_2')!;
+
+    createNewDLC(chain, deployer, contractPrincipal(deployer_2, callbackContract), {vaultAmount: 2500000, btcDeposit: 2, liquidationRatio: 14000, liquidationFee: 1000 });
+
+    let block = chain.mineBlock([
+      Tx.contractCall(dlcManagerContract, "check-liquidation", [types.buff(UUID), types.uint(shiftPriceValue(20000))], deployer.address)
+    ]);
+
     block.receipts[0].result.expectOk().expectBool(false);
-    block.receipts[1].result.expectOk().expectBool(true);
  }
 })
 
@@ -176,28 +190,77 @@ Clarinet.test({
       Tx.contractCall(dlcManagerContract, "get-payout-ratio", [types.buff(UUID), types.uint(shiftPriceValue(9000))], deployer.address),
     ]);
 
-    block.receipts[0].result.expectOk().expectUint(78571428571);
+    block.receipts[0].result.expectOk().expectUint(78571428);
     block.receipts[1].result.expectOk().expectUint(0);
-    block.receipts[2].result.expectOk().expectUint(100000000000);
+    block.receipts[2].result.expectOk().expectUint(100000000);
  }
 })
 
 Clarinet.test({
-  name: "get-payout-ratio returns the correct amount for given BTC price",
+  name: "get-payout-ratio returns the correct amount for given BTC price #2",
   async fn(chain: Chain, accounts: Map<string, Account>) {
     const deployer = accounts.get('deployer')!;
     const deployer_2 = accounts.get('deployer_2')!;
 
-    createNewDLC(chain, deployer, contractPrincipal(deployer_2, callbackContract), {vaultAmount: 1500000, btcDeposit: 2, liquidationRatio: 14000, liquidationFee: 1000 });
+    createNewDLC(chain, deployer, contractPrincipal(deployer_2, callbackContract), {vaultAmount: 2500000, btcDeposit: 2, liquidationRatio: 14000, liquidationFee: 1000 });
 
     let block = chain.mineBlock([
-      Tx.contractCall(dlcManagerContract, "get-payout-ratio", [types.buff(UUID), types.uint(shiftPriceValue(10400))], deployer.address),
-      Tx.contractCall(dlcManagerContract, "get-payout-ratio", [types.buff(UUID), types.uint(shiftPriceValue(11000))], deployer.address),
+      Tx.contractCall(dlcManagerContract, "get-payout-ratio", [types.buff(UUID), types.uint(shiftPriceValue(15000))], deployer.address),
 
     ]);
 
-    block.receipts[0].result.expectOk().expectUint(79326923076);
-    block.receipts[1].result.expectOk().expectUint(0);
+    block.receipts[0].result.expectOk().expectUint(91666666);  // 1.8333 BTC is 91.66% of the 2 BTC collateral
+ }
+})
+
+Clarinet.test({
+  name: "get-payout-ratio returns the correct amount for given BTC price #3",
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+    const deployer = accounts.get('deployer')!;
+    const deployer_2 = accounts.get('deployer_2')!;
+
+    createNewDLC(chain, deployer, contractPrincipal(deployer_2, callbackContract), {vaultAmount: 1500000, btcDeposit: 1, liquidationRatio: 16000, liquidationFee: 800 });
+
+    let block = chain.mineBlock([
+      Tx.contractCall(dlcManagerContract, "get-payout-ratio", [types.buff(UUID), types.uint(shiftPriceValue(20000))], deployer.address),
+
+    ]);
+
+    block.receipts[0].result.expectOk().expectUint(81000000);
+ }
+})
+
+Clarinet.test({
+  name: "get-payout-ratio returns the correct amount for given BTC price #4",
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+    const deployer = accounts.get('deployer')!;
+    const deployer_2 = accounts.get('deployer_2')!;
+
+    createNewDLC(chain, deployer, contractPrincipal(deployer_2, callbackContract), {vaultAmount: 2500000, btcDeposit: 1, liquidationRatio: 15500, liquidationFee: 1500 });
+
+    let block = chain.mineBlock([
+      Tx.contractCall(dlcManagerContract, "get-payout-ratio", [types.buff(UUID), types.uint(shiftPriceValue(30000))], deployer.address),
+
+    ]);
+
+    block.receipts[0].result.expectOk().expectUint(95833333);
+ }
+})
+
+Clarinet.test({
+  name: "get-payout-ratio returns the correct amount for given BTC price #5",
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+    const deployer = accounts.get('deployer')!;
+    const deployer_2 = accounts.get('deployer_2')!;
+
+    createNewDLC(chain, deployer, contractPrincipal(deployer_2, callbackContract), {vaultAmount: 2500000, btcDeposit: 2, liquidationRatio: 14000, liquidationFee: 1000 });
+
+    let block = chain.mineBlock([
+      Tx.contractCall(dlcManagerContract, "get-payout-ratio", [types.buff(UUID), types.uint(shiftPriceValue(10000))], deployer.address),
+
+    ]);
+
+    block.receipts[0].result.expectOk().expectUint(100000000); // entire collateral goes to the Protocol
  }
 })
 
@@ -286,7 +349,7 @@ Clarinet.test({
         assertEquals(typeof printEvent2, 'object');
         assertEquals(printEvent2.type, 'contract_event');
         assertEquals(printEvent2.contract_event.topic, "print");
-        assertStringIncludes(printEvent2.contract_event.value, 'actual-closing-time: u1647332, closing-price: u1358866993200, event-source: "dlclink:close-dlc-liquidate-internal:v0", payout-ratio: (ok u80953782749), uuid: 0x66616b6575756964')
+        assertStringIncludes(printEvent2.contract_event.value, 'actual-closing-time: u1647332, closing-price: u1358866993200, event-source: "dlclink:close-dlc-liquidate-internal:v0", payout-ratio: (ok u80949850), uuid: 0x66616b6575756964')
 
         const contractEvent = block.receipts[0].events[1];
 

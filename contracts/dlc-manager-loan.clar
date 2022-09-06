@@ -219,15 +219,18 @@
   (let (
     (dlc (unwrap! (get-dlc uuid) err-unknown-dlc))
     (collateral-value (get-collateral-value (get btc-deposit dlc) btc-price))
-    (sell-to-liquidators-ratio (/ (shift-value (get vault-loan-amount dlc) ten-to-power-16) collateral-value)) ;; the amount the protocol has to sell to liquidators
-    (payout-ratio-precise (* sell-to-liquidators-ratio (+ u100 (get liquidation-fee dlc)))) ;; the additional liquidation-fee percentage is calculated into the result
+    ;; the ratio the protocol has to sell to liquidators:
+    (sell-to-liquidators-ratio (/ (shift-value (get vault-loan-amount dlc) ten-to-power-16) collateral-value)) 
+    ;; the additional liquidation-fee percentage is calculated into the result. Since it is shifted by 10000, we divide:
+    (payout-ratio-precise (+ sell-to-liquidators-ratio (* (/ sell-to-liquidators-ratio u10000) (get liquidation-fee dlc))))
+    ;; The final payout-ratio is a truncated version:
     (payout-ratio (unshift-value payout-ratio-precise ten-to-power-8))
     )
-    ;; We normalise the result to be between 0.00-100.00
+    ;; We cap result to be between the desired bounds
     (begin 
       (if (unwrap! (check-liquidation uuid btc-price) err-cant-unwrap)
-          (if (>= payout-ratio (shift-value u1000 ten-to-power-8)) 
-            (ok (shift-value u1000 ten-to-power-8)) 
+          (if (>= payout-ratio (shift-value u1 ten-to-power-8)) 
+            (ok (shift-value u1 ten-to-power-8)) 
             (ok payout-ratio))
         (ok u0)
       )  
@@ -236,9 +239,9 @@
 )
 
 ;; Calculating loan collateral value for a given btc-price * (10**8), with pennies precision.
-;; Since the deposit is in Sats, after multiplication we first unshift by 16, then shift by 2 to get pennies precision ($12345.67 = u1234567)
+;; Since the deposit is in Sats, after multiplication we first shift by 2, then ushift by 16 to get pennies precision ($12345.67 = u1234567)
 (define-private (get-collateral-value (btc-deposit uint) (btc-price uint))
-  (shift-value (unshift-value (* btc-deposit btc-price) ten-to-power-16) ten-to-power-2)
+  (unshift-value (shift-value (* btc-deposit btc-price) ten-to-power-2) ten-to-power-16)
 )
 
 (define-read-only (is-trusted-oracle (pubkey (buff 33)))
