@@ -1,5 +1,4 @@
 ;;ERROR CODES
-(define-constant err-not-contract-owner (err u100))
 (define-constant err-untrusted-oracle (err u101))
 (define-constant err-stale-data (err u102))
 (define-constant err-unauthorised (err u2001))
@@ -18,7 +17,7 @@
 (define-constant ten-to-power-8 u100000000)
 (define-constant ten-to-power-16 u10000000000000000)
 
-;; status enums
+;; Status enums
 (define-constant status-open u0)
 (define-constant status-closed u1)
 
@@ -26,7 +25,7 @@
 (define-constant contract-owner tx-sender)
 
 ;; Current contract's name
-(define-constant dlc-manager-contract .dlc-manager-pricefeed-v2-01)
+(define-constant dlc-manager-contract .dlc-manager-loan-v0)
 
 ;; Importing the trait to use it as a type
 (use-trait cb-trait .dlc-link-callback-trait.dlc-link-callback-trait)
@@ -89,14 +88,14 @@
         creator: tx-sender,
         callback-contract: callback-contract,
         nonce: nonce,
-        event-source: "dlclink:create-dlc:v2" 
+        event-source: "dlclink:create-dlc:v0" 
       })
       (ok true)
     )
   ) 
 )
 
-;;opens a new dlc - called by the DLC Oracle system
+;; Opens a new DLC - called by the DLC Oracle system
 (define-public (create-dlc-internal (uuid (buff 8)) (vault-loan-amount uint) (btc-deposit uint) (liquidation-ratio uint) (liquidation-fee uint) (emergency-refund-time uint) (creator principal) (callback-contract <cb-trait>) (nonce uint))
   (begin
     (asserts! (is-eq contract-owner tx-sender) err-unauthorised)
@@ -120,7 +119,7 @@
       btc-deposit: btc-deposit,
       emergency-refund-time: emergency-refund-time,
       creator: creator,
-      event-source: "dlclink:create-dlc-internal:v2" 
+      event-source: "dlclink:create-dlc-internal:v0" 
     })
     (try! (contract-call? callback-contract post-create-dlc-handler nonce uuid))
     (nft-mint? open-dlc uuid dlc-manager-contract))) ;;mint an open-dlc nft to keep track of open dlcs
@@ -137,7 +136,7 @@
       uuid: uuid,
       creator: (get creator dlc),
       caller: tx-sender,
-      event-source: "dlclink:close-dlc:v2"
+      event-source: "dlclink:close-dlc:v0"
       })
     (ok true)
   ))
@@ -152,7 +151,7 @@
       uuid: uuid,
       creator: (get creator dlc),
       caller: tx-sender,
-      event-source: "dlclink:close-dlc-liquidate:v2" 
+      event-source: "dlclink:close-dlc-liquidate:v0" 
       })
     (ok true)
   ))
@@ -169,11 +168,11 @@
     (print {
       uuid: uuid,
       closing-price: closing-price,
-      event-source: "dlclink:close-dlc-internal:v2" })
+      event-source: "dlclink:close-dlc-internal:v0" })
     (try! (contract-call? callback-contract post-close-dlc-handler uuid closing-price))
     (nft-burn? open-dlc uuid dlc-manager-contract)))
 
-;;Close the dlc with the oracle data. This is called by the DLC Oracle service
+;; Close the dlc with the oracle data. This is called by the DLC Oracle service
 (define-public (close-dlc-liquidate-internal (uuid (buff 8)) (timestamp uint) (entries (list 10 {symbol: (buff 32), value: uint})) (signature (buff 65)) (callback-contract <cb-trait>))
   (let (
     ;; Recover the pubkey of the signer.
@@ -193,10 +192,10 @@
     (map-set dlcs uuid (merge dlc { closing-price: (get value (element-at entries u0)), actual-closing-time: (/ timestamp u1000), status: status-closed })) ;;timestamp is in milliseconds so we have to convert it to seconds to keep the timestamps consistent
     (print {
       uuid: uuid,
-      payout-curve-value: (get-payout-ratio uuid price),
+      payout-ratio: (get-payout-ratio uuid price),
       closing-price: price,
       actual-closing-time: (/ timestamp u1000),
-      event-source: "dlclink:close-dlc-liquidate-internal:v2" })
+      event-source: "dlclink:close-dlc-liquidate-internal:v0" })
     (try! (contract-call? callback-contract post-close-dlc-handler uuid (some price)))
     (nft-burn? open-dlc uuid dlc-manager-contract))) ;;burn the open-dlc nft related to the UUID
 
@@ -220,15 +219,18 @@
   (let (
     (dlc (unwrap! (get-dlc uuid) err-unknown-dlc))
     (collateral-value (get-collateral-value (get btc-deposit dlc) btc-price))
-    (sell-to-liquidators-ratio (/ (shift-value (get vault-loan-amount dlc) ten-to-power-16) collateral-value)) ;; the amount the protocol has to sell to liquidators
-    (payout-ratio-precise (* sell-to-liquidators-ratio (+ u100 (get liquidation-fee dlc)))) ;; the additional liquidation-fee percentage is calculated into the result
+    ;; the ratio the protocol has to sell to liquidators:
+    (sell-to-liquidators-ratio (/ (shift-value (get vault-loan-amount dlc) ten-to-power-16) collateral-value)) 
+    ;; the additional liquidation-fee percentage is calculated into the result. Since it is shifted by 10000, we divide:
+    (payout-ratio-precise (+ sell-to-liquidators-ratio (* (/ sell-to-liquidators-ratio u10000) (get liquidation-fee dlc))))
+    ;; The final payout-ratio is a truncated version:
     (payout-ratio (unshift-value payout-ratio-precise ten-to-power-8))
     )
-    ;; We normalise the result to be between 0.00-100.00
+    ;; We cap result to be between the desired bounds
     (begin 
       (if (unwrap! (check-liquidation uuid btc-price) err-cant-unwrap)
-          (if (>= payout-ratio (shift-value u1000 ten-to-power-8)) 
-            (ok (shift-value u1000 ten-to-power-8)) 
+          (if (>= payout-ratio (shift-value u1 ten-to-power-8)) 
+            (ok (shift-value u1 ten-to-power-8)) 
             (ok payout-ratio))
         (ok u0)
       )  
@@ -237,9 +239,9 @@
 )
 
 ;; Calculating loan collateral value for a given btc-price * (10**8), with pennies precision.
-;; Since the deposit is in Sats, after multiplication we first we unshift by 16, then shift by 2 to get pennies precision ($12345.67 = u1234567)
+;; Since the deposit is in Sats, after multiplication we first shift by 2, then ushift by 16 to get pennies precision ($12345.67 = u1234567)
 (define-private (get-collateral-value (btc-deposit uint) (btc-price uint))
-  (shift-value (unshift-value (* btc-deposit btc-price) ten-to-power-16) ten-to-power-2)
+  (unshift-value (shift-value (* btc-deposit btc-price) ten-to-power-2) ten-to-power-16)
 )
 
 (define-read-only (is-trusted-oracle (pubkey (buff 33)))
@@ -248,7 +250,7 @@
 
 (define-public (set-trusted-oracle (pubkey (buff 33)) (trusted bool))
   (begin
-    (asserts! (is-eq contract-owner tx-sender) err-not-contract-owner)
+    (asserts! (is-eq contract-owner tx-sender) err-unauthorised)
     (ok (map-set trusted-oracles pubkey trusted))
   )
 )
@@ -257,20 +259,20 @@
 ;; This is picked up by the Observer infrastructure to start listening to contract-calls of our public functions.
 (define-public (register-contract (contract-address <cb-trait>))
   (begin
-    (asserts! (is-eq contract-owner tx-sender) err-not-contract-owner)
+    (asserts! (is-eq contract-owner tx-sender) err-unauthorised)
     (print { 
       contract-address: contract-address,
-      event-source: "dlclink:register-contract:v2" })
+      event-source: "dlclink:register-contract:v0" })
     (nft-mint? registered-contract (contract-of contract-address) dlc-manager-contract)
   )
 )
 
 (define-public (unregister-contract (contract-address <cb-trait>))
   (begin
-    (asserts! (is-eq contract-owner tx-sender) err-not-contract-owner)
+    (asserts! (is-eq contract-owner tx-sender) err-unauthorised)
     (print { 
       contract-address: contract-address,
-      event-source: "dlclink:unregister-contract:v2" })
+      event-source: "dlclink:unregister-contract:v0" })
     (nft-burn? registered-contract (contract-of contract-address) dlc-manager-contract)
   )
 )

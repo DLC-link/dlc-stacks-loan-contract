@@ -94,7 +94,7 @@ The attestation hash is what will be used by the participants (user, protocol, e
 
 We are happy to have support and contribution from the community. Please find us on Discord and see below for developer details.
 
-For reference, a sample of this deployed contract can be found here: [dlc-manager-pricefeed-v2-01](https://explorer.stacks.co/txid/ST12S2DB1PKRM1BJ1G5BQS0AB0QPKHRVHWXDBJ27R.dlc-manager-pricefeed-v2-01?chain=testnet)
+For reference, a sample of this deployed contract can be found here: [dlc-manager-loan-v0](https://explorer.stacks.co/txid/ST12S2DB1PKRM1BJ1G5BQS0AB0QPKHRVHWXDBJ27R.dlc-manager-loan-v0?chain=testnet)
 
 # Setup Development Environment
 
