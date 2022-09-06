@@ -1,4 +1,4 @@
-
+;; sample-contract-loan-v0
 ;; Sample protocol contract for using DLC.Link.
 ;; This contract is a sample representing a protocol that would call into the DLC.Link management contract
 ;; It borrows from the Clarity trait to
@@ -7,8 +7,8 @@
 ;; - Close the DLC
 ;; - Accept a succesful closing through the closing callback
 
-(use-trait cb-trait .dlc-link-callback-trait.dlc-link-callback-trait)
-(impl-trait .dlc-link-callback-trait.dlc-link-callback-trait)
+(use-trait cb-trait 'ST12S2DB1PKRM1BJ1G5BQS0AB0QPKHRVHWXDBJ27R.dlc-link-callback-trait.dlc-link-callback-trait)
+(impl-trait 'ST12S2DB1PKRM1BJ1G5BQS0AB0QPKHRVHWXDBJ27R.dlc-link-callback-trait.dlc-link-callback-trait)
 
 ;; Error constants
 (define-constant err-cant-unwrap (err u1000))
@@ -85,7 +85,7 @@
             liquidation-fee: liquidation-fee,
             closing-price: none
           })
-          (unwrap! (ok (as-contract (contract-call? .dlc-manager-loan-v0 create-dlc vault-loan-amount btc-deposit liquidation-ratio liquidation-fee emergency-refund-time target user-id))) err-contract-call-failed)
+          (unwrap! (ok (as-contract (contract-call? 'ST12S2DB1PKRM1BJ1G5BQS0AB0QPKHRVHWXDBJ27R.dlc-manager-loan-v0 create-dlc vault-loan-amount btc-deposit liquidation-ratio liquidation-fee emergency-refund-time target user-id))) err-contract-call-failed)
       )
     )
 )
@@ -118,7 +118,7 @@
     )
     (asserts! (is-eq contract-owner tx-sender)  err-unauthorised)
     (begin
-      (unwrap! (ok (as-contract (contract-call? .dlc-manager-loan-v0 close-dlc uuid))) err-contract-call-failed)
+      (unwrap! (ok (as-contract (contract-call? 'ST12S2DB1PKRM1BJ1G5BQS0AB0QPKHRVHWXDBJ27R.dlc-manager-loan-v0 close-dlc uuid))) err-contract-call-failed)
     )
   )
 )
@@ -132,7 +132,7 @@
     (asserts! (is-eq contract-owner tx-sender) err-unauthorised)
     (asserts! (unwrap! (check-liquidation uuid btc-price) err-cant-unwrap) err-doesnt-need-liquidation)
     (begin
-      (unwrap! (ok (as-contract (contract-call? .dlc-manager-loan-v0 close-dlc-liquidate uuid))) err-contract-call-failed)
+      (unwrap! (ok (as-contract (contract-call? 'ST12S2DB1PKRM1BJ1G5BQS0AB0QPKHRVHWXDBJ27R.dlc-manager-loan-v0 close-dlc-liquidate uuid))) err-contract-call-failed)
     )
   )
 )
@@ -142,7 +142,7 @@
 (define-private (check-liquidation (uuid (buff 8)) (btc-price uint))
   (let (
     ) 
-    (begin (unwrap! (ok (as-contract (contract-call? .dlc-manager-loan-v0 check-liquidation uuid btc-price))) err-contract-call-failed)
+    (begin (unwrap! (ok (as-contract (contract-call? 'ST12S2DB1PKRM1BJ1G5BQS0AB0QPKHRVHWXDBJ27R.dlc-manager-loan-v0 check-liquidation uuid btc-price))) err-contract-call-failed)
     )
   )
 )
