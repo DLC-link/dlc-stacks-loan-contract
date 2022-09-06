@@ -10,7 +10,7 @@ export const protocolPrivateKey = config.protocolPrivateKey;
 export const tokenName = 'open-dlc';
 
 // Generally only changing these for the scripts:
-export const exampleContractName = "sample-protocol-loan-v0";
+export const exampleContractName = "sample-contract-loan-v0";
 export const contractName = "dlc-manager-loan-v0";
 export const assetName = 'BTC';
 export const strikePrice = 1500;

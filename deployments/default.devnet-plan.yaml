@@ -28,7 +28,7 @@ plan:
             path: contracts/dlc-manager-loan.clar
             anchor-block-only: true
         - contract-publish:
-            contract-name: sample-protocol-loan-v0
+            contract-name: sample-contract-loan-v0
             expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             cost: 55290
             path: example/sample-protocol-contract.clar
