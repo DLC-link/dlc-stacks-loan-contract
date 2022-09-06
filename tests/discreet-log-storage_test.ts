@@ -205,11 +205,10 @@ Clarinet.test({
     createNewDLC(chain, deployer, contractPrincipal(deployer_2, callbackContract), {vaultAmount: 2500000, btcDeposit: 2, liquidationRatio: 14000, liquidationFee: 1000 });
 
     let block = chain.mineBlock([
-      Tx.contractCall(dlcManagerContract, "get-payout-ratio", [types.buff(UUID), types.uint(shiftPriceValue(15000))], deployer.address),
-
+      Tx.contractCall(dlcManagerContract, "get-payout-ratio", [types.buff(UUID), types.uint(shiftPriceValue(15000))], deployer.address)
     ]);
 
-    block.receipts[0].result.expectOk().expectUint(91666666);  // 1.8333 BTC is 91.66% of the 2 BTC collateral
+    block.receipts[0].result.expectOk().expectUint(91666666);  // 91.66% of the 2 BTC collateral is 1.8333 BTC 
  }
 })
 
@@ -222,8 +221,7 @@ Clarinet.test({
     createNewDLC(chain, deployer, contractPrincipal(deployer_2, callbackContract), {vaultAmount: 1500000, btcDeposit: 1, liquidationRatio: 16000, liquidationFee: 800 });
 
     let block = chain.mineBlock([
-      Tx.contractCall(dlcManagerContract, "get-payout-ratio", [types.buff(UUID), types.uint(shiftPriceValue(20000))], deployer.address),
-
+      Tx.contractCall(dlcManagerContract, "get-payout-ratio", [types.buff(UUID), types.uint(shiftPriceValue(20000))], deployer.address)
     ]);
 
     block.receipts[0].result.expectOk().expectUint(81000000);
@@ -239,8 +237,7 @@ Clarinet.test({
     createNewDLC(chain, deployer, contractPrincipal(deployer_2, callbackContract), {vaultAmount: 2500000, btcDeposit: 1, liquidationRatio: 15500, liquidationFee: 1500 });
 
     let block = chain.mineBlock([
-      Tx.contractCall(dlcManagerContract, "get-payout-ratio", [types.buff(UUID), types.uint(shiftPriceValue(30000))], deployer.address),
-
+      Tx.contractCall(dlcManagerContract, "get-payout-ratio", [types.buff(UUID), types.uint(shiftPriceValue(30000))], deployer.address)
     ]);
 
     block.receipts[0].result.expectOk().expectUint(95833333);
@@ -256,8 +253,7 @@ Clarinet.test({
     createNewDLC(chain, deployer, contractPrincipal(deployer_2, callbackContract), {vaultAmount: 2500000, btcDeposit: 2, liquidationRatio: 14000, liquidationFee: 1000 });
 
     let block = chain.mineBlock([
-      Tx.contractCall(dlcManagerContract, "get-payout-ratio", [types.buff(UUID), types.uint(shiftPriceValue(10000))], deployer.address),
-
+      Tx.contractCall(dlcManagerContract, "get-payout-ratio", [types.buff(UUID), types.uint(shiftPriceValue(10000))], deployer.address)
     ]);
 
     block.receipts[0].result.expectOk().expectUint(100000000); // entire collateral goes to the Protocol
