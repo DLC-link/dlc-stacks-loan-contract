@@ -7,8 +7,8 @@
 ;; - Close the DLC
 ;; - Accept a succesful closing through the closing callback
 
-(use-trait cb-trait 'ST12S2DB1PKRM1BJ1G5BQS0AB0QPKHRVHWXDBJ27R.dlc-link-callback-trait.dlc-link-callback-trait)
-(impl-trait 'ST12S2DB1PKRM1BJ1G5BQS0AB0QPKHRVHWXDBJ27R.dlc-link-callback-trait.dlc-link-callback-trait)
+(use-trait cb-trait 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.dlc-link-callback-trait.dlc-link-callback-trait)
+(impl-trait 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.dlc-link-callback-trait.dlc-link-callback-trait)
 
 ;; Error constants
 (define-constant err-cant-unwrap (err u1000))
@@ -23,8 +23,8 @@
 ;; Contract name bindings
 (define-constant sample-protocol-contract .sample-contract-loan-v0)
 
-;; A map to store "usercontracts": information about a DLC
-(define-map usercontracts
+;; A map to store "useraccounts": information about a DLC
+(define-map useraccounts
   uint
   {
     dlc_uuid: (optional (buff 8)),
@@ -46,28 +46,28 @@
   uint
 )
 
-(define-read-only (get-usercontract (user-id uint)) 
-  (map-get? usercontracts user-id)
+(define-read-only (get-useraccount (user-id uint)) 
+  (map-get? useraccounts user-id)
 )
 
 (define-read-only (get-user-id-by-uuid (uuid (buff 8)))
   (map-get? uuid-user-id uuid)
 )
 
-;; An auto-incrementing user-id will be used to know which incoming uuid is connected to which usercontract
+;; An auto-incrementing user-id will be used to know which incoming uuid is connected to which useraccount
 (define-data-var last-user-id uint u0)
 
 (define-read-only (get-last-user-id) 
   (ok (var-get last-user-id))
 )
 
-;; An example function to initiate the creation of a DLC usercontract.
+;; An example function to initiate the creation of a DLC useraccount.
 ;; - Increments the user-id
 ;; - Calls the dlc-manager-contract's create-dlc function to initiate the creation
 ;; The DLC Contract will call back into the provided 'target' contract with the resulting UUID (and the provided user-id).
 ;; Currently this 'target' must be the same contract as the one initiating the process, for authentication purposes.
-;; See scripts/setup-user-contract.ts for an example of calling it.
-(define-public (setup-user-contract (vault-loan-amount uint) (btc-deposit uint) (liquidation-ratio uint) (liquidation-fee uint) (emergency-refund-time uint))
+;; See scripts/setup-user-account.ts for an example of calling it.
+(define-public (setup-user-account (vault-loan-amount uint) (btc-deposit uint) (liquidation-ratio uint) (liquidation-fee uint) (emergency-refund-time uint))
     (let 
       (
         (user-id (+ (var-get last-user-id) u1)) 
@@ -75,7 +75,7 @@
       )
       (var-set last-user-id user-id)
       (begin
-          (map-set usercontracts user-id {
+          (map-set useraccounts user-id {
             dlc_uuid: none,
             user-id: user-id,
             active: false,
@@ -85,7 +85,7 @@
             liquidation-fee: liquidation-fee,
             closing-price: none
           })
-          (unwrap! (ok (as-contract (contract-call? 'ST12S2DB1PKRM1BJ1G5BQS0AB0QPKHRVHWXDBJ27R.dlc-manager-loan-v0 create-dlc vault-loan-amount btc-deposit liquidation-ratio liquidation-fee emergency-refund-time target user-id))) err-contract-call-failed)
+          (unwrap! (ok (as-contract (contract-call? 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.dlc-manager-loan-v0 create-dlc vault-loan-amount btc-deposit liquidation-ratio liquidation-fee emergency-refund-time target user-id))) err-contract-call-failed)
       )
     )
 )
@@ -97,8 +97,8 @@
     (begin
       ;; If creation was successful, we save the results in the local maps
         (print { uuid: uuid, user-id: user-id })
-        (map-set usercontracts user-id (
-            merge (unwrap! (map-get? usercontracts user-id) err-unknown-user-contract ) {
+        (map-set useraccounts user-id (
+            merge (unwrap! (map-get? useraccounts user-id) err-unknown-user-contract ) {
             dlc_uuid: (some uuid),
             user-id: user-id,
             active: true
@@ -108,31 +108,31 @@
     )
 )
 
-;; An example function for initiating the closing of a DLC.
+;; An example function for closing the loan and initiating the closing of a DLC.
 ;; Very similar to the creation process
 ;; See scripts/close-dlc-protocol.ts for an example of calling it.
-(define-public (close-dlc (user-id uint)) 
+(define-public (repay-loan (user-id uint)) 
   (let (
-    (usercontract (unwrap! (get-usercontract user-id) err-unknown-user-contract))
-    (uuid (unwrap! (get dlc_uuid usercontract) err-cant-unwrap))
+    (useraccount (unwrap! (get-useraccount user-id) err-unknown-user-contract))
+    (uuid (unwrap! (get dlc_uuid useraccount) err-cant-unwrap))
     )
     (asserts! (is-eq contract-owner tx-sender)  err-unauthorised)
     (begin
-      (unwrap! (ok (as-contract (contract-call? 'ST12S2DB1PKRM1BJ1G5BQS0AB0QPKHRVHWXDBJ27R.dlc-manager-loan-v0 close-dlc uuid))) err-contract-call-failed)
+      (unwrap! (ok (as-contract (contract-call? 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.dlc-manager-loan-v0 close-dlc uuid))) err-contract-call-failed)
     )
   )
 )
 
 ;; An example function to initiate the liquidation of a DLC loan contract.
-(define-public (close-dlc-liquidate (user-id uint) (btc-price uint)) 
+(define-public (liquidate-loan (user-id uint) (btc-price uint)) 
   (let (
-    (usercontract (unwrap! (get-usercontract user-id) err-unknown-user-contract))
-    (uuid (unwrap! (get dlc_uuid usercontract) err-cant-unwrap))
+    (useraccount (unwrap! (get-useraccount user-id) err-unknown-user-contract))
+    (uuid (unwrap! (get dlc_uuid useraccount) err-cant-unwrap))
     ) 
     (asserts! (is-eq contract-owner tx-sender) err-unauthorised)
     (asserts! (unwrap! (check-liquidation uuid btc-price) err-cant-unwrap) err-doesnt-need-liquidation)
     (begin
-      (unwrap! (ok (as-contract (contract-call? 'ST12S2DB1PKRM1BJ1G5BQS0AB0QPKHRVHWXDBJ27R.dlc-manager-loan-v0 close-dlc-liquidate uuid))) err-contract-call-failed)
+      (unwrap! (ok (as-contract (contract-call? 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.dlc-manager-loan-v0 close-dlc-liquidate uuid))) err-contract-call-failed)
     )
   )
 )
@@ -142,7 +142,7 @@
 (define-private (check-liquidation (uuid (buff 8)) (btc-price uint))
   (let (
     ) 
-    (begin (unwrap! (ok (as-contract (contract-call? 'ST12S2DB1PKRM1BJ1G5BQS0AB0QPKHRVHWXDBJ27R.dlc-manager-loan-v0 check-liquidation uuid btc-price))) err-contract-call-failed)
+    (begin (unwrap! (ok (as-contract (contract-call? 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.dlc-manager-loan-v0 check-liquidation uuid btc-price))) err-contract-call-failed)
     )
   )
 )
@@ -152,10 +152,10 @@
 (define-public (post-close-dlc-handler (uuid (buff 8)) (closing-price (optional uint)))
   (let (
     (user-id (unwrap! (get-user-id-by-uuid uuid ) err-cant-unwrap ))
-    (usercontract (unwrap! (get-usercontract user-id) err-unknown-user-contract))
+    (useraccount (unwrap! (get-useraccount user-id) err-unknown-user-contract))
     )
     (begin 
-      (map-set usercontracts user-id (merge usercontract { active: false, closing-price: closing-price })) 
+      (map-set useraccounts user-id (merge useraccount { active: false, closing-price: closing-price })) 
     )
     (ok true)
   )
