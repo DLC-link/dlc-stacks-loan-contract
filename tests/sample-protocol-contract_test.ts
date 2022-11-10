@@ -58,6 +58,20 @@ function openLoan(chain: Chain, deployer: Account, callbackContract: string, loa
   assertEquals(createDLCPrintEvent.contract_event.topic, "print");
   assertStringIncludes(createDLCPrintEvent.contract_event.value, 'btc-deposit: u100000000, callback-contract: STNHKEPYEPJ8ET55ZZ0M5A34J0R3N5FM2CMMMAZ6.sample-contract-loan-v0, creator: STNHKEPYEPJ8ET55ZZ0M5A34J0R3N5FM2CMMMAZ6.sample-contract-loan-v0, emergency-refund-time: u10, event-source: "dlclink:create-dlc:v0", liquidation-fee: u1000, liquidation-ratio: u14000, nonce: u1, vault-loan-amount: u1000000')
 
+
+  let loanBlock = chain.mineBlock([
+    Tx.contractCall(callbackContract, "get-useraccount", [types.uint(1)], deployer.address)
+  ]);
+
+  //The loan account in the sample protocl contact
+  const loan: any = loanBlock.receipts[0].result.expectSome().expectTuple();
+
+  assertEquals(loan.dlc_uuid, 'none');
+  assertEquals(loan.status, '"not-ready"');
+  assertEquals(loan['closing-price'], "none");
+  assertEquals(loan['vault-collateral'], "u100000000");
+  assertEquals(loan['vault-loan'], "u1000000");
+
   const block2 = chain.mineBlock([
     Tx.contractCall(dlcManagerContract, "create-dlc-internal", [types.buff(UUID), types.uint(loanParams.vaultAmount), types.uint(shiftPriceValue(loanParams.btcDeposit)), types.uint(loanParams.liquidationRatio), types.uint(loanParams.liquidationFee), types.uint(10), types.principal(callbackContract), types.principal(callbackContract), types.uint(1)], deployer.address)
   ]);
@@ -110,7 +124,7 @@ Clarinet.test({
     const dlcUuid = loan.dlc_uuid.expectSome();
 
     assertEquals(hex2ascii(dlcUuid), "fakeuuid");
-    assertEquals(loan.active, "true");
+    assertEquals(loan.status, '"ready"');
     assertEquals(loan['closing-price'], "none");
     assertEquals(loan['vault-collateral'], "u100000000");
     assertEquals(loan['vault-loan'], "u1000000");
@@ -150,7 +164,7 @@ Clarinet.test({
     const dlcUuid = loan.dlc_uuid.expectSome();
 
     assertEquals(hex2ascii(dlcUuid), "fakeuuid");
-    assertEquals(loan.active, "false");
+    assertEquals(loan.status, '"repaid"');
     assertEquals(loan['closing-price'], "none");
     assertEquals(loan['vault-collateral'], "u100000000");
     assertEquals(loan['vault-loan'], "u1000000");
@@ -203,7 +217,7 @@ Clarinet.test({
     const dlcUuid = loan.dlc_uuid.expectSome();
 
     assertEquals(hex2ascii(dlcUuid), "fakeuuid");
-    assertEquals(loan.active, "false");
+    assertEquals(loan.status, '"liquidated"');
     assertEquals(loan['closing-price'], "(some u1358866993200)");
   },
 });

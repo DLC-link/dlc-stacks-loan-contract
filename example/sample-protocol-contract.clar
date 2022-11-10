@@ -17,6 +17,15 @@
 (define-constant err-unknown-user-contract (err u2003))
 (define-constant err-doesnt-need-liquidation (err u2004))
 
+;; Status Enum
+(define-constant status-not-ready "not-ready")
+(define-constant status-ready "ready")
+(define-constant status-funded "funded")
+(define-constant status-pre-repaid "pre-repaid")
+(define-constant status-repaid "repaid")
+(define-constant status-pre-liquidated "pre-liquidated")
+(define-constant status-liquidated "liquidated")
+
 ;; Contract owner
 (define-constant contract-owner tx-sender)
 
@@ -30,7 +39,7 @@
     dlc_uuid: (optional (buff 8)),
     user-id: uint, ;; a field to used to map the returned UUIDs to
     ;; Other data about the user and their specific contract
-    active: bool,
+    status: (string-ascii 14),
     vault-loan: uint, ;; the borrowed amount
     vault-collateral: uint, ;; btc deposit in sats
     liquidation-ratio: uint, ;; the collateral/loan ratio below which liquidation can happen, with two decimals precision (140% = u14000)
@@ -41,12 +50,12 @@
 
 ;; A map to link uuids and user-ids
 ;; used to reverse-lookup user-ids when the dlc-manager contract gives us a UUID
-(define-map uuid-user-id 
-  (buff 8) 
+(define-map uuid-user-id
+  (buff 8)
   uint
 )
 
-(define-read-only (get-useraccount (user-id uint)) 
+(define-read-only (get-useraccount (user-id uint))
   (map-get? useraccounts user-id)
 )
 
@@ -57,7 +66,7 @@
 ;; An auto-incrementing user-id will be used to know which incoming uuid is connected to which useraccount
 (define-data-var last-user-id uint u0)
 
-(define-read-only (get-last-user-id) 
+(define-read-only (get-last-user-id)
   (ok (var-get last-user-id))
 )
 
@@ -68,9 +77,9 @@
 ;; Currently this 'target' must be the same contract as the one initiating the process, for authentication purposes.
 ;; See scripts/setup-user-account.ts for an example of calling it.
 (define-public (setup-user-account (vault-loan-amount uint) (btc-deposit uint) (liquidation-ratio uint) (liquidation-fee uint) (emergency-refund-time uint))
-    (let 
+    (let
       (
-        (user-id (+ (var-get last-user-id) u1)) 
+        (user-id (+ (var-get last-user-id) u1))
         (target sample-protocol-contract)
       )
       (var-set last-user-id user-id)
@@ -78,7 +87,7 @@
           (map-set useraccounts user-id {
             dlc_uuid: none,
             user-id: user-id,
-            active: false,
+            status: status-not-ready,
             vault-loan: vault-loan-amount,
             vault-collateral: btc-deposit,
             liquidation-ratio: liquidation-ratio,
@@ -101,7 +110,7 @@
             merge (unwrap! (map-get? useraccounts user-id) err-unknown-user-contract ) {
             dlc_uuid: (some uuid),
             user-id: user-id,
-            active: true
+            status: status-ready
         }))
         (map-set uuid-user-id uuid user-id)
         (ok true)
@@ -111,12 +120,15 @@
 ;; An example function for closing the loan and initiating the closing of a DLC.
 ;; Very similar to the creation process
 ;; See scripts/close-dlc-protocol.ts for an example of calling it.
-(define-public (repay-loan (user-id uint)) 
+(define-public (repay-loan (user-id uint))
   (let (
     (useraccount (unwrap! (get-useraccount user-id) err-unknown-user-contract))
     (uuid (unwrap! (get dlc_uuid useraccount) err-cant-unwrap))
     )
     (asserts! (is-eq contract-owner tx-sender)  err-unauthorised)
+    (begin
+      (map-set useraccounts user-id (merge useraccount { status: status-pre-repaid }))
+    )
     (begin
       (unwrap! (ok (as-contract (contract-call? 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.dlc-manager-loan-v0 close-dlc uuid))) err-contract-call-failed)
     )
@@ -124,13 +136,16 @@
 )
 
 ;; An example function to initiate the liquidation of a DLC loan contract.
-(define-public (liquidate-loan (user-id uint) (btc-price uint)) 
+(define-public (liquidate-loan (user-id uint) (btc-price uint))
   (let (
     (useraccount (unwrap! (get-useraccount user-id) err-unknown-user-contract))
     (uuid (unwrap! (get dlc_uuid useraccount) err-cant-unwrap))
-    ) 
+    )
     (asserts! (is-eq contract-owner tx-sender) err-unauthorised)
     (asserts! (unwrap! (check-liquidation uuid btc-price) err-cant-unwrap) err-doesnt-need-liquidation)
+    (begin
+      (map-set useraccounts user-id (merge useraccount { status: status-pre-liquidated }))
+    )
     (begin
       (unwrap! (ok (as-contract (contract-call? 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.dlc-manager-loan-v0 close-dlc-liquidate uuid))) err-contract-call-failed)
     )
@@ -141,7 +156,7 @@
 ;; Used as a local check before initiating liquidation
 (define-private (check-liquidation (uuid (buff 8)) (btc-price uint))
   (let (
-    ) 
+    )
     (begin (unwrap! (ok (as-contract (contract-call? 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.dlc-manager-loan-v0 check-liquidation uuid btc-price))) err-contract-call-failed)
     )
   )
@@ -153,9 +168,14 @@
   (let (
     (user-id (unwrap! (get-user-id-by-uuid uuid ) err-cant-unwrap ))
     (useraccount (unwrap! (get-useraccount user-id) err-unknown-user-contract))
-    )
-    (begin 
-      (map-set useraccounts user-id (merge useraccount { active: false, closing-price: closing-price })) 
+    (currstatus (get status useraccount) )
+    (newstatus  (unwrap! (if (is-eq currstatus status-pre-repaid)
+                    (ok status-repaid)
+                    (ok status-liquidated)
+            ) err-cant-unwrap)
+    ))
+    (begin
+      (map-set useraccounts user-id (merge useraccount { status: newstatus, closing-price: closing-price }))
     )
     (ok true)
   )
