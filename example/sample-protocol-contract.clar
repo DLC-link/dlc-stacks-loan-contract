@@ -70,6 +70,15 @@
   (ok (var-get last-user-id))
 )
 
+(define-read-only (get-useraccount-by-uuid (uuid (buff 8)))
+  (let (
+    (user-id (unwrap! (get-user-id-by-uuid uuid ) err-cant-unwrap ))
+    (useraccount (unwrap! (get-useraccount user-id) err-unknown-user-contract))
+    )
+    (ok useraccount)
+  )
+)
+
 ;; An example function to initiate the creation of a DLC useraccount.
 ;; - Increments the user-id
 ;; - Calls the dlc-manager-contract's create-dlc function to initiate the creation

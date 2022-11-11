@@ -132,6 +132,23 @@ Clarinet.test({
 });
 
 Clarinet.test({
+  name: "get-useraccount-by-uuid works after creating the loan",
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+    const deployer = accounts.get('deployer')!;
+    const deployer_2 = accounts.get('deployer_2')!;
+
+    openLoan(chain, deployer, contractPrincipal(deployer_2, sampleProtocolContract));
+
+    let block = chain.mineBlock([
+      Tx.contractCall(contractPrincipal(deployer_2, sampleProtocolContract), "get-useraccount-by-uuid", [types.buff(UUID)], deployer.address)
+    ]);
+
+    const account: any = block.receipts[0].result.expectOk();
+    assertStringIncludes(account, 'closing-price: none, dlc_uuid: (some 0x66616b6575756964), liquidation-fee: u1000, liquidation-ratio: u14000, status: "ready", user-id: u1, vault-collateral: u100000000, vault-loan: u1000000');
+  },
+});
+
+Clarinet.test({
   name: "repay loan on sample protocol contract should close the loan, emit a dlclink event, and burn the nft",
   async fn(chain: Chain, accounts: Map<string, Account>) {
     const deployer = accounts.get('deployer')!;
