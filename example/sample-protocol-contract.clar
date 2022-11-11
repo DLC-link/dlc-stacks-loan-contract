@@ -128,8 +128,6 @@
     (asserts! (is-eq contract-owner tx-sender)  err-unauthorised)
     (begin
       (map-set useraccounts user-id (merge useraccount { status: status-pre-repaid }))
-    )
-    (begin
       (unwrap! (ok (as-contract (contract-call? 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.dlc-manager-loan-v0 close-dlc uuid))) err-contract-call-failed)
     )
   )
@@ -145,8 +143,6 @@
     (asserts! (unwrap! (check-liquidation uuid btc-price) err-cant-unwrap) err-doesnt-need-liquidation)
     (begin
       (map-set useraccounts user-id (merge useraccount { status: status-pre-liquidated }))
-    )
-    (begin
       (unwrap! (ok (as-contract (contract-call? 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.dlc-manager-loan-v0 close-dlc-liquidate uuid))) err-contract-call-failed)
     )
   )
