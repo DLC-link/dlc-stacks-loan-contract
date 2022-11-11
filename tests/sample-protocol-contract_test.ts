@@ -47,7 +47,7 @@ function setTrustedOracle(chain: Chain, senderAddress: string): Block {
 
 function openLoan(chain: Chain, deployer: Account, callbackContract: string, loanParams: { vaultAmount: number, btcDeposit: number, liquidationRatio: number, liquidationFee: number } = { vaultAmount: 1000000, btcDeposit: 1, liquidationRatio: 14000, liquidationFee: 1000 }) {
   const block = chain.mineBlock([
-    Tx.contractCall(callbackContract, "setup-user-account", [types.uint(loanParams.vaultAmount), types.uint(shiftPriceValue(loanParams.btcDeposit)), types.uint(loanParams.liquidationRatio), types.uint(loanParams.liquidationFee), types.uint(10)], deployer.address)
+    Tx.contractCall(callbackContract, "setup-loan", [types.uint(loanParams.vaultAmount), types.uint(shiftPriceValue(loanParams.btcDeposit)), types.uint(loanParams.liquidationRatio), types.uint(loanParams.liquidationFee), types.uint(10)], deployer.address)
   ]);
 
   block.receipts[0].result.expectOk().expectBool(true);
@@ -98,7 +98,7 @@ function openLoan(chain: Chain, deployer: Account, callbackContract: string, loa
 }
 
 Clarinet.test({
-  name: "setup-user-account on sample contract creates the user account, emits a dlclink event, and mints an nft",
+  name: "setup-loan on sample contract creates the user account, emits a dlclink event, and mints an nft",
   async fn(chain: Chain, accounts: Map<string, Account>) {
     const deployer = accounts.get('deployer')!;
     const deployer_2 = accounts.get('deployer_2')!;

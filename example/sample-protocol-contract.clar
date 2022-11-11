@@ -75,8 +75,8 @@
 ;; - Calls the dlc-manager-contract's create-dlc function to initiate the creation
 ;; The DLC Contract will call back into the provided 'target' contract with the resulting UUID (and the provided user-id).
 ;; Currently this 'target' must be the same contract as the one initiating the process, for authentication purposes.
-;; See scripts/setup-user-account.ts for an example of calling it.
-(define-public (setup-user-account (vault-loan-amount uint) (btc-deposit uint) (liquidation-ratio uint) (liquidation-fee uint) (emergency-refund-time uint))
+;; See scripts/setup-loan.ts for an example of calling it.
+(define-public (setup-loan (vault-loan-amount uint) (btc-deposit uint) (liquidation-ratio uint) (liquidation-fee uint) (emergency-refund-time uint))
     (let
       (
         (user-id (+ (var-get last-user-id) u1))
