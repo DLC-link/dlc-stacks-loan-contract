@@ -1,4 +1,7 @@
 // deno-lint-ignore-file require-await no-explicit-any prefer-const
+
+import { standardPrincipalCV } from "@stacks/transactions";
+
 // @ts-ignore
 import { Clarinet, Tx, Chain, Account, types, assertEquals, pricePackageToCV, assertStringIncludes, hex2ascii, shiftPriceValue } from "./deps.ts";
 // @ts-ignore
@@ -30,8 +33,6 @@ const pricePackageForLiquidation: PricePackage = {
   prices: [{ symbol: "BTC", value: 13588.669932 }]
 }
 
-
-
 const packageCV = pricePackageToCV(pricePackage);
 const packageCVForLiquidation = pricePackageToCV(pricePackageForLiquidation);
 
@@ -60,7 +61,7 @@ function openLoan(chain: Chain, deployer: Account, callbackContract: string, loa
 
 
   let loanBlock = chain.mineBlock([
-    Tx.contractCall(callbackContract, "get-useraccount", [types.uint(1)], deployer.address)
+    Tx.contractCall(callbackContract, "get-useraccount", [standardPrincipalCV(deployer.address)], deployer.address)
   ]);
 
   //The loan account in the sample protocl contact
@@ -116,7 +117,7 @@ Clarinet.test({
     assertEquals(dlc.creator, "STNHKEPYEPJ8ET55ZZ0M5A34J0R3N5FM2CMMMAZ6.sample-contract-loan-v0");
 
     let block2 = chain.mineBlock([
-      Tx.contractCall(contractPrincipal(deployer_2, sampleProtocolContract), "get-useraccount", [types.uint(1)], deployer.address)
+      Tx.contractCall(contractPrincipal(deployer_2, sampleProtocolContract), "get-useraccount", [deployer.address], deployer.address)
     ]);
 
     //The loan account in the sample protocl contact
@@ -174,7 +175,7 @@ Clarinet.test({
     assertEquals(hex2ascii(burnEvent.nft_burn_event.value), UUID);
 
     let block3 = chain.mineBlock([
-      Tx.contractCall(contractPrincipal(deployer_2, sampleProtocolContract), "get-useraccount", [types.uint(1)], deployer.address)
+      Tx.contractCall(contractPrincipal(deployer_2, sampleProtocolContract), "get-useraccount", [contractPrincipal(deployer_2, sampleProtocolContract)], deployer.address)
     ]);
     //The loan account in the sample protocl contact
     const loan: any = block3.receipts[0].result.expectSome().expectTuple();
@@ -227,7 +228,7 @@ Clarinet.test({
     assertEquals(dlc['closing-price'], "(some u1358866993200)")
 
     let block2 = chain.mineBlock([
-      Tx.contractCall(contractPrincipal(deployer_2, sampleProtocolContract), "get-useraccount", [types.uint(1)], deployer.address)
+      Tx.contractCall(contractPrincipal(deployer_2, sampleProtocolContract), "get-useraccount", [contractPrincipal(deployer_2, sampleProtocolContract)], deployer.address)
     ]);
     //The loan account in the sample protocl contact
     const loan: any = block2.receipts[0].result.expectSome().expectTuple();
