@@ -124,7 +124,7 @@
     )
     (begin
       ;; If creation was successful, we save the results in the local maps
-        ;; (print { uuid: uuid, nonce: nonce })
+        (print { uuid: uuid, nonce: nonce })
         (map-set useraccounts user-address (
             merge (unwrap! (map-get? useraccounts user-address) err-unknown-user-contract ) {
             dlc_uuid: (some uuid),
