@@ -208,7 +208,7 @@ Clarinet.test({
       Tx.contractCall(dlcManagerContract, "get-payout-ratio", [types.buff(UUID), types.uint(shiftPriceValue(15000))], deployer.address)
     ]);
 
-    block.receipts[0].result.expectOk().expectUint(91666666);  // 91.66% of the 2 BTC collateral is 1.8333 BTC 
+    block.receipts[0].result.expectOk().expectUint(91666666);  // 91.66% of the 2 BTC collateral is 1.8333 BTC
   }
 })
 
