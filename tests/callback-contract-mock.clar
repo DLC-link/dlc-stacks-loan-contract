@@ -21,3 +21,8 @@
     (unwrap! (ok (as-contract (contract-call? 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.dlc-manager-loan-v0 create-dlc vault-loan-amount btc-deposit liquidation-ratio liquidation-fee emergency-refund-time target u1))) err-cant-unwrap)
   )
 )
+
+(define-public (set-status-funded (uuid (buff 8))) 
+
+  (ok true)
+)

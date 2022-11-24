@@ -30,8 +30,6 @@ const pricePackageForLiquidation: PricePackage = {
   prices: [{ symbol: "BTC", value: 13588.669932 }]
 }
 
-
-
 const packageCV = pricePackageToCV(pricePackage);
 const packageCVForLiquidation = pricePackageToCV(pricePackageForLiquidation);
 

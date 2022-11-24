@@ -16,6 +16,7 @@
 (define-constant err-unauthorised (err u2001))
 (define-constant err-unknown-loan-contract (err u2003))
 (define-constant err-doesnt-need-liquidation (err u2004))
+(define-constant err-dlc-already-funded (err u2005))
 
 ;; Status Enum
 (define-constant status-not-ready "not-ready")
@@ -48,6 +49,8 @@
   }
 )
 
+(define-map creator-loan-ids principal (list 50 uint))
+
 ;; A map to link uuids and loan-ids
 ;; used to reverse-lookup loan-ids when the dlc-manager contract gives us a UUID
 (define-map uuid-loan-id
@@ -61,6 +64,23 @@
 
 (define-read-only (get-loan-id-by-uuid (uuid (buff 8)))
   (map-get? uuid-loan-id uuid)
+)
+
+;; @desc get all loan IDs for given creator
+(define-read-only (get-creator-loan-ids (creator principal)) 
+  (default-to
+    (list)
+    (map-get? creator-loan-ids creator)
+  )
+)
+
+;; @desc get all loans info for given creator
+(define-read-only (get-creator-loans (creator principal)) 
+  (let (
+    (loan-ids (get-creator-loan-ids creator))
+  )
+    (map get-loan loan-ids)
+  )
 )
 
 ;; An auto-incrementing loan-id will be used to know which incoming uuid is connected to which loan
@@ -90,6 +110,7 @@
       (
         (loan-id (+ (var-get last-loan-id) u1))
         (target sample-protocol-contract)
+        (current-loan-ids (get-creator-loan-ids tx-sender))
       )
       (var-set last-loan-id loan-id)
       (begin
@@ -103,6 +124,7 @@
             closing-price: none,
             owner: tx-sender
           })
+          (map-set creator-loan-ids tx-sender (unwrap-panic (as-max-len? (append current-loan-ids loan-id) u50)))
           (unwrap! (ok (as-contract (contract-call? 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.dlc-manager-loan-v0 create-dlc vault-loan-amount btc-deposit liquidation-ratio liquidation-fee emergency-refund-time target loan-id))) err-contract-call-failed)
       )
     )
@@ -180,6 +202,20 @@
     ))
     (begin
       (map-set loans loan-id (merge loan { status: newstatus, closing-price: closing-price }))
+    )
+    (ok true)
+  )
+)
+
+(define-public (set-status-funded (uuid (buff 8))) 
+  (let (
+    (loan-id (unwrap! (get-loan-id-by-uuid uuid ) err-cant-unwrap ))
+    (loan (unwrap! (get-loan loan-id) err-unknown-loan-contract))
+    )
+    (asserts! (not (is-eq (get status loan) status-funded)) err-dlc-already-funded)
+    (begin
+      (map-set loans loan-id (merge loan { status: status-funded }))
+      (print { uuid: uuid, status: status-funded })
     )
     (ok true)
   )

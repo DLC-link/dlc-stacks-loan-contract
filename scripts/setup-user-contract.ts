@@ -2,7 +2,8 @@ import {
   unixTimeStamp,
   protocolPrivateKey,
   exampleContractAddress,
-  exampleContractName
+  exampleContractName,
+  network
 } from "./common";
 
 import {
@@ -14,7 +15,7 @@ import { StacksMocknet } from "@stacks/network";
 
 const functionName = "setup-loan";
 
-const network = new StacksMocknet({url: "http://stx-btc1.dlc.link:3999"});
+// const network = new StacksMocknet({url: "http://stx-btc1.dlc.link:3999"});
 
 const txOptions = {
   contractAddress: exampleContractAddress,
