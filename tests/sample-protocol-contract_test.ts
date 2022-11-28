@@ -87,7 +87,7 @@ function openLoan(chain: Chain, deployer: Account, callbackContract: string, loa
   assertEquals(typeof callbackPrintEvent, 'object');
   assertEquals(callbackPrintEvent.type, 'contract_event');
   assertEquals(callbackPrintEvent.contract_event.topic, "print");
-  assertStringIncludes(callbackPrintEvent.contract_event.value, 'loan-id: u1, uuid: 0x66616b6575756964')
+  assertStringIncludes(callbackPrintEvent.contract_event.value, 'loan-id: u1, status: "ready", uuid: 0x66616b6575756964')
 
   assertEquals(typeof mintEvent, 'object');
   assertEquals(mintEvent.type, 'nft_mint_event');
@@ -157,14 +157,15 @@ Clarinet.test({
     let block = chain.mineBlock([
       Tx.contractCall(contractPrincipal(deployer_2, sampleProtocolContract), "repay-loan", [types.uint(1)], deployer_2.address)
     ]);
-    assertStringIncludes(block.receipts[0].events[0].contract_event.value, 'caller: STNHKEPYEPJ8ET55ZZ0M5A34J0R3N5FM2CMMMAZ6.sample-contract-loan-v0, creator: STNHKEPYEPJ8ET55ZZ0M5A34J0R3N5FM2CMMMAZ6.sample-contract-loan-v0, event-source: "dlclink:close-dlc:v0", uuid: 0x66616b6575756964')
+    assertStringIncludes(block.receipts[0].events[0].contract_event.value, 'status: "pre-repaid", uuid: 0x66616b6575756964');
+    assertStringIncludes(block.receipts[0].events[1].contract_event.value, 'caller: STNHKEPYEPJ8ET55ZZ0M5A34J0R3N5FM2CMMMAZ6.sample-contract-loan-v0, creator: STNHKEPYEPJ8ET55ZZ0M5A34J0R3N5FM2CMMMAZ6.sample-contract-loan-v0, event-source: "dlclink:close-dlc:v0", uuid: 0x66616b6575756964')
 
     const block2 = chain.mineBlock([
       Tx.contractCall(dlcManagerContract, "close-dlc-internal", [types.buff(UUID), types.principal(contractPrincipal(deployer_2, sampleProtocolContract))], deployer.address)
     ]);
 
     assertStringIncludes(block2.receipts[0].events[0].contract_event.value, 'closing-price: none, event-source: "dlclink:close-dlc-internal:v0", uuid: 0x66616b6575756964')
-    const burnEvent = block2.receipts[0].events[1];
+    const burnEvent = block2.receipts[0].events[2];
     assertEquals(typeof burnEvent, 'object');
     assertEquals(burnEvent.type, 'nft_burn_event');
     assertEquals(burnEvent.nft_burn_event.asset_identifier.split("::")[1], nftAssetContract);
@@ -199,7 +200,8 @@ Clarinet.test({
     let liquidateCall = chain.mineBlock([
       Tx.contractCall(contractPrincipal(deployer_2, sampleProtocolContract), "liquidate-loan", [types.uint(1), types.uint(10000)], deployer_2.address),
     ]);
-    assertStringIncludes(liquidateCall.receipts[0].events[0].contract_event.value, 'caller: STNHKEPYEPJ8ET55ZZ0M5A34J0R3N5FM2CMMMAZ6.sample-contract-loan-v0, creator: STNHKEPYEPJ8ET55ZZ0M5A34J0R3N5FM2CMMMAZ6.sample-contract-loan-v0, event-source: "dlclink:close-dlc-liquidate:v0", uuid: 0x66616b6575756964');
+    assertStringIncludes(liquidateCall.receipts[0].events[0].contract_event.value, 'btc-price: u10000, status: "pre-liquidated", uuid: 0x66616b6575756964');
+    assertStringIncludes(liquidateCall.receipts[0].events[1].contract_event.value, 'caller: STNHKEPYEPJ8ET55ZZ0M5A34J0R3N5FM2CMMMAZ6.sample-contract-loan-v0, creator: STNHKEPYEPJ8ET55ZZ0M5A34J0R3N5FM2CMMMAZ6.sample-contract-loan-v0, event-source: "dlclink:close-dlc-liquidate:v0", uuid: 0x66616b6575756964');
 
     let block = chain.mineBlock([
       Tx.contractCall(dlcManagerContract, "close-dlc-liquidate-internal", [types.buff(UUID), packageCVForLiquidation.timestamp, packageCVForLiquidation.prices, signatureForLiquidation, types.principal(contractPrincipal(deployer_2, sampleProtocolContract))], deployer.address),
@@ -214,7 +216,7 @@ Clarinet.test({
     assertEquals(printEvent2.contract_event.topic, "print");
     assertStringIncludes(printEvent2.contract_event.value, 'actual-closing-time: u1647332, closing-price: u1358866993200, event-source: "dlclink:close-dlc-liquidate-internal:v0", payout-ratio: (ok u80949850), uuid: 0x66616b6575756964')
 
-    const burnEvent = block.receipts[0].events[1];
+    const burnEvent = block.receipts[0].events[2];
 
     assertEquals(typeof burnEvent, 'object');
     assertEquals(burnEvent.type, 'nft_burn_event');

@@ -136,7 +136,7 @@
 (define-public (post-create-dlc-handler (loan-id uint) (uuid (buff 8)))
     (begin
       ;; If creation was successful, we save the results in the local maps
-        (print { uuid: uuid, loan-id: loan-id })
+        (print { uuid: uuid, loan-id: loan-id, status: status-ready })
         (map-set loans loan-id (
             merge (unwrap! (map-get? loans loan-id) err-unknown-loan-contract ) {
             dlc_uuid: (some uuid),
@@ -157,6 +157,7 @@
     )
     (begin
       (map-set loans loan-id (merge loan { status: status-pre-repaid }))
+      (print { uuid: uuid, status: status-pre-repaid })
       (unwrap! (ok (as-contract (contract-call? 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.dlc-manager-loan-v0 close-dlc uuid))) err-contract-call-failed)
     )
   )
@@ -171,6 +172,7 @@
     (asserts! (unwrap! (check-liquidation uuid btc-price) err-cant-unwrap) err-doesnt-need-liquidation)
     (begin
       (map-set loans loan-id (merge loan { status: status-pre-liquidated }))
+      (print { uuid: uuid, status: status-pre-liquidated, btc-price: btc-price })
       (unwrap! (ok (as-contract (contract-call? 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.dlc-manager-loan-v0 close-dlc-liquidate uuid))) err-contract-call-failed)
     )
   )
@@ -200,6 +202,7 @@
     ))
     (begin
       (map-set loans loan-id (merge loan { status: newstatus, closing-price: closing-price }))
+      (print { uuid: uuid, status: newstatus })
     )
     (ok true)
   )
