@@ -1,9 +1,9 @@
 import {
-  network,
   unixTimeStamp,
   protocolPrivateKey,
   exampleContractAddress,
-  exampleContractName
+  exampleContractName,
+  network
 } from "./common";
 
 import {
@@ -11,8 +11,11 @@ import {
   broadcastTransaction,
   uintCV,
 } from "@stacks/transactions";
+import { StacksMocknet } from "@stacks/network";
 
-const functionName = "setup-user-contract";
+const functionName = "setup-loan";
+
+// const network = new StacksMocknet({url: "http://stx-btc1.dlc.link:3999"});
 
 const txOptions = {
   contractAddress: exampleContractAddress,

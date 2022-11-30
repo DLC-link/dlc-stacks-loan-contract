@@ -1,4 +1,4 @@
-import { network, contractAddress, contractName} from './common'
+import { network, contractAddress, contractName, exampleContractAddress} from './common'
 import {
   callReadOnlyFunction,
   contractPrincipalCV,
@@ -13,7 +13,7 @@ const txOptions = {
   contractName: contractName,
   functionName: functionName,
   functionArgs: [
-    contractPrincipalCV(contractAddress, protocolContractName)
+    contractPrincipalCV(exampleContractAddress, protocolContractName)
   ],
   senderAddress: contractAddress,
   network,

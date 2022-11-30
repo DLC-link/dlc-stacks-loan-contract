@@ -19,7 +19,7 @@
 
 ;; Status enums
 (define-constant status-open u0)
-(define-constant status-closed u1)
+(define-constant status-closed u10)
 
 ;; Contract owner
 (define-constant contract-owner tx-sender)
@@ -51,6 +51,7 @@
     actual-closing-time: uint,
     emergency-refund-time: uint,
     creator: principal,
+    callback-contract: principal,
     status: uint
   })
 
@@ -66,6 +67,19 @@
 (define-private (unshift-value (value uint) (shift uint))
   (/ value shift))
 
+(define-read-only (get-callback-contract (uuid (buff 8)))
+  (let (
+    (dlc (unwrap! (get-dlc uuid) err-unknown-dlc))
+    (callback-contract (get callback-contract dlc))
+    )
+    (ok callback-contract)
+  )
+)
+
+(define-public (set-status-funded (uuid (buff 8)) (callback-contract <cb-trait>))
+  (ok (try! (contract-call? callback-contract set-status-funded uuid)))
+)
+
 ;;emits an event - see README for more details
 ;;vault-loan-amount : the borrowed USDA amount in the vault, in pennies (e.g. 10000 USD : 1000000)
 ;;btc-deposit : the deposited BTC amount, in Sats (shifted by 10**8)
@@ -78,7 +92,6 @@
   (let (
     ) 
     (begin
-      (asserts! (is-eq callback-contract tx-sender) err-unauthorised)
       (print {
         vault-loan-amount: vault-loan-amount, 
         btc-deposit: btc-deposit,
@@ -110,6 +123,7 @@
       actual-closing-time: u0, 
       emergency-refund-time: emergency-refund-time,
       creator: creator,
+      callback-contract: (contract-of callback-contract),
       status: status-open })
     (print {
       uuid: uuid, 
